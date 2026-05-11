@@ -16,6 +16,7 @@
 
     - name: Check connection
       include_tasks: "../tasks/con_check.yml"
+      when: ansible_hostname != "rfs061"
 
   tasks:
     - name: Run RedirFS check command
