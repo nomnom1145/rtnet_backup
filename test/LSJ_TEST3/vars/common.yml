@@ -1,0 +1,24 @@
+---
+data_type: report
+data_key: server
+system: linux
+report_type: SHIN_server_RedirFS
+report: "{{ report_type }}"
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+file_path: "/fap/report/{{ report_type }}/{{ today }}/{{ fap.job_id }}"
+
+aggregated:
+  data_list: >-
+    {{
+      groups['all']
+      | map('extract', hostvars, 'merged')
+      | select('defined')
+      | list
+      | sum(start=[])
+    }}
+
+job_info:
+  job_id: "{{ hostvars[groups['all'][0]].fap.job_id }}"
+  report_type: "{{ report_type }}"
+  file_path: "{{ file_path }}"
+  content_value: "{{ aggregated }}"

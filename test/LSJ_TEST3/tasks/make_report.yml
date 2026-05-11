@@ -1,0 +1,22 @@
+---
+- name: Create Excel report
+  delegate_to: localhost
+  set_fact:
+    excel_report_created: "{{ job_info | make_version_report(report_file_path) }}"
+  vars:
+    report_file_path: >-
+      {{
+        job_info.file_path
+        | default('/fap/report/SHIN_server_RedirFS/' ~ job_info.job_id ~ '.xlsx')
+      }}
+  when:
+    - job_info is defined
+    - job_info.content_value is defined
+    - job_info.content_value.data_list is defined
+    - (job_info.content_value.data_list | length) > 0
+
+- name: Print Excel report result
+  debug:
+    msg: "Excel report created: {{ excel_report_created }}"
+  when:
+    - excel_report_created is defined

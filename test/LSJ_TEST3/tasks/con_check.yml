@@ -1,0 +1,30 @@
+---
+- name: 접속 테스트
+  raw: "hostname"
+  register: con_check
+  ignore_errors: true
+  ignore_unreachable: true
+  failed_when: false
+
+- name: 접속 결과 출력
+  debug:
+    msg: >-
+      {{
+        host_ip ~ ' 접속 실패 | 실패 사유 : ' ~ connection_failure_reason
+        if connection_failed
+        else
+        host_ip ~ ' 접속 완료 | hostname : ' ~ resolved_hostname
+      }}
+  vars:
+    host_ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+    connection_failed: "{{ con_check.unreachable | default(false) or (con_check.rc | default(0) | int) != 0 }}"
+    resolved_hostname: "{{ (con_check.stdout | default(inventory_hostname)) | trim }}"
+    connection_failure_reason: >-
+      {{
+        (
+          con_check.msg
+          | default(con_check.stderr)
+          | default(con_check.stdout)
+          | default('unknown error')
+        ) | trim
+      }}

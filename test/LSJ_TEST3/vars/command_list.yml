@@ -1,0 +1,18 @@
+---
+version_check_commands:
+  - name: redirfs_version
+    command: cat /sys/module/redirfs/version
+
+  - name: redhat_release
+    command: cat /etc/redhat-release
+
+  - name: host_ip
+    command: hostname -I
+
+x_commands:
+  - "hostname"
+  - "reboot"
+  - "rm"
+  - "hostname"
+  - "reboot"
+  - "rm"
