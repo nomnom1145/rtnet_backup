@@ -30,7 +30,8 @@
     mail_smtp_host: "smtp.gmail.com"
     mail_smtp_port: 587
     mail_from: "{{ vault_mail_smtp_username }}"
-    mail_to: "sg.jang@gmail.com"
+    # mail_to: "sg.jang@gmail.com"
+    mail_to: "sg.jang@rtnet.co.kr"
 
   tasks:
     - name: 스크립트 파일 실행(git 동기화)
