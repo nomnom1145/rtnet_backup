@@ -12,10 +12,10 @@
       debug:
         var: sh_test
 
-    # - name: con_check
-    #   raw: hostname -I
-    #   register: con_check_test
+    - name: con_check
+      raw: hostname -I
+      register: con_check_test
 
-    # - name: 접속 체크
-    #   debug:
-    #     var: con_check_test
+    - name: 접속 체크
+      debug:
+        var: con_check_test
