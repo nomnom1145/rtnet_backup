@@ -1,0 +1,13 @@
+---
+- name: playbooks
+  hosts: all
+  gather_facts: false
+  ignore_errors: true
+  tasks:
+    - name: 스크립트 파일 실행(git 동기화)
+      raw: sh /home/fap/sh_test/code_git_push.sh
+      register: sh_test
+
+    - name: 디버그
+      debug:
+        var: sh_test
