@@ -9,8 +9,17 @@
       raw: sh /fap/ansible/projects/플레이북_git_동기화/templates/code_git_push.sh
       register: sh_test
 
-    - name: 
-
     - name: 디버그
       debug:
         var: sh_test
+
+    - name: 기본 메일 발송
+      fap.common.send_mail:
+        noti_name: "git_연동"
+        subject: "Mail 테스트입니다."
+        contents: "{{ sh_test }}"
+        content_type: "TEXT"
+        recipients: "sg.jang@rtnet.co.kr"
+        template_id: "{{ fap.template_id | default(omit) }}"
+        job_id: "{{ fap.job_id | default(omit) }}"
+      delegate_to: localhost
