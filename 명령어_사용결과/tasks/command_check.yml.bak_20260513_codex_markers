@@ -1,0 +1,266 @@
+---
+- name: Set command defaults
+  set_fact:
+    host_ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+    resolved_hostname: "{{ (con_check.stdout | default(inventory_hostname)) | trim }}"
+
+    connection_failed: >-
+      {{
+        con_check.unreachable | default(false)
+        or
+        (con_check.rc | default(0) | int) != 0
+      }}
+
+    connection_failure_reason: >-
+      {{
+        (
+          con_check.msg
+          | default(con_check.stderr)
+          | default(con_check.stdout)
+          | default('unknown error')
+        ) | trim
+      }}
+
+    display_command: >-
+      {{
+        current_check_command.command
+        if (
+          current_check_command is mapping
+          and current_check_command.command is defined
+        )
+        else current_check_command
+      }}
+
+    execute_command: >-
+      {{
+        current_check_command.command
+        if (
+          current_check_command is mapping
+          and current_check_command.command is defined
+        )
+        else current_check_command
+      }}
+
+- name: Set command name
+  set_fact:
+    command_name: >-
+      {{
+        current_check_command.name
+        if (
+          current_check_command is mapping
+          and current_check_command.name is defined
+        )
+        else display_command
+      }}
+
+# - name: Run version check
+#   raw: >-
+#     bash -lc 'out=$({{ execute_command }} 2>&1); rc=$?;
+#     printf "__RC__=%s\n%s\n" "$rc" "$out"; exit 0'
+#   register: version_check
+#   ignore_errors: true
+#   ignore_unreachable: true
+#   failed_when: false
+#   when: not connection_failed
+
+- name: Run version check
+  raw: |
+    script_file=$(mktemp /tmp/fap_cmd.XXXXXX)
+    output_file=$(mktemp /tmp/fap_out.XXXXXX)
+    cleanup() {
+      rm -f "$script_file" "$output_file"
+    }
+    trap cleanup EXIT
+    cat <<'__FAP_CMD__' > "$script_file"
+    {{ execute_command }}
+    __FAP_CMD__
+    bash "$script_file" >"$output_file" 2>&1
+    rc=$?
+    cat "$output_file"
+    echo "__RC__=$rc"
+  register: version_check
+  ignore_errors: true
+  ignore_unreachable: true
+  failed_when: false
+  when: not connection_failed
+
+
+- name: Merge report row
+  set_fact:
+    merged: >-
+      {{
+        (merged | default([])) + [
+          {
+            'cmd_id': (current_check_index | int) + 1,
+            'name': command_name,
+            'cmd_name': command_name,
+            'cmd': display_command,
+            'command': display_command,
+
+            'host': host_ip,
+            'host_name': host_ip,
+            'hostname': resolved_hostname,
+            'ip': host_ip,
+
+            'system': system,
+            'report_type': report_type,
+            'file_path': file_path,
+            'data_key': data_key,
+
+            'version': resolved_version,
+            'result': resolved_output,
+            'output': resolved_output,
+
+            'message': resolved_failure_reason,
+            'failure_reason': resolved_failure_reason,
+
+            'is_pass': resolved_is_pass,
+            'is_success': resolved_is_success,
+            'check_result': resolved_check_result,
+
+            'status': (
+              'SUCCESS'
+              if (resolved_is_success | int) == 1
+              else 'FAILED'
+            )
+          }
+        ]
+      }}
+
+  vars:
+    version_result: "{{ version_check | default({}) }}"
+
+    resolved_stdout: >-
+      {{
+        version_result.stdout
+        | default('')
+        | trim
+      }}
+
+    stdout_lines: "{{ resolved_stdout.splitlines() }}"
+
+    reported_rc: >-
+      {{
+        (
+          stdout_lines[-1] 
+          | regex_replace('^__RC__=', '')
+          | int
+        )
+        if (
+          (stdout_lines | length) > 0
+          and
+          (stdout_lines[-1] is match('^__RC__='))
+        )
+        else
+        (
+          version_result.rc | default(1) | int
+        )
+      }}
+
+    payload_stdout: >-
+      {{
+        (stdout_lines[:-1] | join('\n')) | trim
+      }}
+
+    resolved_version: >-
+      {{
+        payload_stdout
+        if (
+          (not connection_failed)
+          and
+          ((reported_rc | int) == 0)
+        )
+        else ''
+      }}
+
+    resolved_output: >-
+      {{
+        payload_stdout
+        if payload_stdout != ''
+        else connection_failure_reason
+      }}
+
+    upper_payload_stdout: >-
+      {{
+        (payload_stdout | string) | upper
+      }}
+
+    resolved_is_pass: >-
+      {%- if connection_failed -%}
+      0
+      {%- elif '[FAIL]' in upper_payload_stdout -%}
+      0
+      {%- elif '[PASS]' in upper_payload_stdout and '[FAIL]' not in upper_payload_stdout -%}
+      1
+      {%- elif ((reported_rc | int) == 0) -%}
+      1
+      {%- else -%}
+      0
+      {%- endif -%}
+
+    resolved_is_success: >-
+      {%- if connection_failed -%}
+      0
+      {%- elif ((reported_rc | int) == 0) -%}
+      1
+      {%- else -%}
+      0
+      {%- endif -%}
+
+    resolved_check_result: >-
+      {{
+        '양호'
+        if (resolved_is_pass | int) == 1
+        else '불량'
+      }}
+
+    resolved_failure_reason: >-
+      {{
+        connection_failure_reason
+        if connection_failed
+        else
+        (
+          ''
+          if ((reported_rc | int) == 0)
+          else
+          (
+            payload_stdout
+            | default(version_result.stderr)
+            | default(version_result.msg)
+            | default(resolved_stdout)
+            | default('version check failed')
+            | trim
+          )
+        )
+      }}
+
+- name: Print command result # 커맨드 사용 결과 출력 코드
+  debug:
+    msg: >-
+      {{
+        host_ip
+        ~ ' | hostname: '
+        ~ resolved_hostname
+        ~ ' | command: '
+        ~ display_command
+        ~ ' | is_pass: '
+        ~ latest_result.is_pass
+        ~ ' | result: '
+        ~ latest_result.result
+
+        if latest_result.failure_reason == ''
+
+        else
+
+        host_ip
+        ~ ' | hostname: '
+        ~ resolved_hostname
+        ~ ' | is_pass: '
+        ~ latest_result.is_pass
+        ~ ' | failed | command: '
+        ~ display_command
+        ~ ' | error: '
+        ~ latest_result.failure_reason
+      }}
+  vars:
+    latest_result: "{{ (merged | default([])) | last }}"

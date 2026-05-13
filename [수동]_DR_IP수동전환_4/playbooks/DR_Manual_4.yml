@@ -1,0 +1,55 @@
+---
+- name: DR_Manual_4
+  hosts: all
+  gather_facts: false
+  tasks:
+  - name: 일시 생성
+    set_fact:
+      today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+    delegate_to: localhost
+    run_once: true
+
+  - name: 변수 파일 호출
+    include_vars: ../vars/DR_Manual_vars04.yml
+
+  - name: Active1 DB 호스트 정보
+    debug: 
+      msg:
+      - "Active DB 정보"
+      - "IP: {{ FIRST_ACTIVE_DB_IP }}"
+      - "HOSTNAME: {{ fap.host_name }}"
+    when: fap.host_ip == FIRST_ACTIVE_DB_IP | default('none')
+
+  - name: Active2 DB 호스트 정보
+    debug: 
+      msg:
+      - "Active2 DB 정보"
+      - "IP: {{ SECOND_ACTIVE_DB_IP }}"
+      - "HOSTNAME: {{ fap.host_name }}"
+    when: fap.host_ip == SECOND_ACTIVE_DB_IP | default('none')  
+    
+  - name: DR if UP
+    raw: /usr/sbin/ifup lo:0
+    register: ifup_result
+    when: IFUP_FLAG | default("N") == "Y"
+
+  # - name: 통신 확인
+  #   wait_for:
+  #     host: "{{ PING_IP }}"
+  #     port: 22
+  #     state: started
+  #     timeout: 3600
+  #   delegate_to: localhost
+
+  - name: IP 기동 결과 확인
+    raw: /usr/sbin/ifconfig -a
+    register: ifconfig_result
+    
+  - name: ifup 결과
+    debug:
+      msg: "{{ ifconfig_result.stdout }}"
+    when: IFUP_FLAG | default("N") == "Y"
+    
+  - name: 작업 완료
+    debug:
+      msg: "DR IP 수동전환_4 완료"

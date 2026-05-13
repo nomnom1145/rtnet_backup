@@ -1,0 +1,36 @@
+---
+# step5. 3작업
+# cubeone check
+- name: cubeone status check
+  raw: |
+    su - {{ item.cubeone_account }} -c "/home/{{ item.cubeone_account }}/bin/cubeone.sh status {{ item.oracle_sid }}"
+  loop: "{{ cubeoneaccount }}"
+  register: cubeone_status
+  when: item.cubeone_account != ""
+
+- name: 김포 cubeone 중지
+  raw: |
+    su - {{ item.item.cubeone_account }} -c "/home/{{ item.item.cubeone_account }}/bin/cubeone.sh stop {{ item.item.oracle_sid }}"
+  register: result_stop_cubeone
+  loop: "{{ cubeone_status.results }}"
+  when: 
+    - item.item.cubeone_account != ""
+    - "'NOT running' not in item.stdout | default('')"
+
+- name: 김포 cubeone 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/step5_{{ fap.host_name }}_cubeone_stop.log"
+    create: true
+    block: |
+      "{{ item.stdout }}"
+    marker: "# {mark} 김포 cubeone 중지 명령어 결과 백업"
+  register: blockinfile_result_crs
+  loop: "{{ result_stop_cubeone.results }}"
+  when: item.stdout is defined
+  delegate_to: localhost
+  ignore_errors: true
+
+- name: cubeone 중지 명령어 결과 백업 경로 출력 ---> localhost
+  when: blockinfile_result_crs.changed | bool
+  debug:
+    msg: "저장 경로 : {{ BACKUP_DIR }}/step5_{{ fap.host_name }}_cubeone_stop.log"

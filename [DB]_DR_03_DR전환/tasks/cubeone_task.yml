@@ -1,0 +1,51 @@
+---
+# cubeone check
+- name: cubeone status check
+  raw: |
+    su - {{ item.cubeone_account }} -c "/home/{{ item.cubeone_account }}/bin/cubeone.sh status {{ item.oracle_sid }}"
+  loop: "{{ cubeoneaccount }}"
+  register: cubeone_status
+  when: item.cubeone_account != ""
+
+- name: 작업실행 디버깅 #### when 조건만 cubeone 실행 task에 추가
+  debug:
+    msg: 
+      - "큐브원 상태 확인 - Not running"
+      - "{{ item.item.cubeone_account | default('') }} 큐브원 실행"
+      - "{{ item.stdout | default('') }}"
+      - "명령어: /home/{{ item.item.cubeone_account | default('') }}/bin/cubeone.sh start {{ item.item.oracle_sid | default('') }}"
+  loop: "{{ cubeone_status.results }}"
+  loop_control:
+    label: "{{ item.item.cubeone_account }}"
+  when:
+    - item.item.cubeone_account != "" 
+    - "'NOT running' in item.stdout | default('')"
+  ignore_errors: true
+
+# step2. 3작업
+- name: cubeone 실행
+  raw: |
+    su - {{ item.item.cubeone_account }} -c "/home/{{ item.item.cubeone_account }}/bin/cubeone.sh start {{ item.item.oracle_sid }}"
+  register: result_start_cubeone
+  loop: "{{ cubeone_status.results }}"
+  when: 
+    - item.item.cubeone_account != ""
+    - "'NOT running' in item.stdout | default('')"
+
+- name: cubeone 실행 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/step3_{{ fap.host_name }}_cubeone_start.log"
+    create: true
+    block: |
+      "{{ item.stdout }}"
+    marker: "# {mark} 김포 cubeone 중지 명령어 결과 백업"
+  register: blockinfile_result_crs
+  loop: "{{ result_start_cubeone.results }}"
+  when: item.stdout is defined
+  ignore_errors: yes
+  delegate_to: localhost
+
+- name: cubeone 실행 명령어 결과 백업 경로 출력 ---> localhost
+  when: blockinfile_result_crs.changed | bool
+  debug:
+    msg: "저장 경로 : {{ BACKUP_DIR }}/step3_{{ fap.host_name }}_cubeone_start.log"

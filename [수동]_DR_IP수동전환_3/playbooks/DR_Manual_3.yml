@@ -1,0 +1,46 @@
+---
+- name: DR_Manual_3
+  hosts: all
+  gather_facts: false
+  tasks:
+  - name: 일시 생성
+    set_fact:
+      today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+    delegate_to: localhost
+    run_once: true
+
+  - name: 변수 파일 호출
+    include_vars: ../vars/DR_Manual_vars03.yml
+
+  - name: Standy DB의 호스트 정보
+    debug: 
+      msg:
+      - "IP: {{ STANDBY_DB_IP }}"
+      - "HOSTNAME: {{ fap.host_name }}"
+    when: fap.host_ip == STANDBY_DB_IP | default('none')
+    
+  - name: IP DOWN
+    raw: "/sbin/ifconfig {{ item.eth }} {{ item.ip }} down"
+    loop: "{{ DR_DB_IP_EXE_LIST }}"
+    register: result_DR_DB_IP_RECOVERY
+    when: item.eth != ""
+
+  - name: IP DOWN 후 통신 확인
+    wait_for:
+      host: "{{ item.ip }}"
+      port: 22
+      state: drained  # 연결 불가 상태가 되어야 정상
+      timeout: 1200    # 타임아웃은 상황에 맞게 조절
+    loop: "{{ DR_DB_IP_EXE_LIST }}"
+    loop_control:
+      label: "{{ item.ip }}"
+    when: item.eth != ""
+    delegate_to: localhost
+    
+  - name: IP DOWN 결과 확인
+    raw: /sbin/ifconfig -a
+    register: ifconfig_result
+    
+  - name: IP DOWN 결과 출력
+    debug:
+      msg: "{{ ifconfig_result.stdout }}"

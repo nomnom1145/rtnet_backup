@@ -1,0 +1,12 @@
+---
+- name: OS 확인
+  debug:
+    msg: "OS Type: {{ os_type }}"
+
+- name: Cisco 변수 로드
+  include_vars: "../../[네트워크]_금지명령어_변수/vars/cisco.yml"
+  when: os_type == "cisco"
+
+- name : Aruba 변수 로드
+  include_vars: "../vars/aruba.yml"
+  when: os_type == 'aruba' or os_type == 'aruba_2930F'

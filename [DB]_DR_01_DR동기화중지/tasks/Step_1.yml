@@ -1,0 +1,70 @@
+---
+#  아래의 명령어는 신세계랑 테스트 할때 진행
+#  SQL> show parameter name
+#  SQL> ALTER DATABASE RECOVER MANAGED STANDBY DATABASE CANCEL;
+
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+############################################### which srvctl ###############################################
+- name: svrctl 명령어 존재여부 확인
+  raw: |
+    source ~/.bash_profile
+    /usr/bin/which srvctl
+  register: srvctl_result
+
+- name: 명령어 미존재 -- 사전 작업중단
+  fail:
+    msg:
+      - "{{ inventory_hostname }} 호스트 내 svrctl 명령어 미존재"
+      - "명령어 점검 후 DR 재 수행이 필요합니다."
+  when: srvctl_result.failed|default(true) == true
+  ignore_errors: false
+
+- name: 명령어 미존재 -- 작업 이행
+  debug:
+    msg: 
+      - "srvctl 명령어 존재: {{ srvctl_result.stdout }}"
+      - "계속해서 작업을 진행합니다."
+  when: srvctl_result.failed|default(true) == false
+############################################### which srvctl ###############################################
+  
+#기존 코드
+- name: 동기화 중지
+  raw: su - "{{ item.oracle_user }}" -c "{{ sync_stop_sh }}"
+  register: result
+  loop: "{{ ORACLE }}"
+  loop_control:
+    label: "{{ item.oracle_sid }}"
+  when: item.oracle_sid != ""  # ORACLE_SID가 정의된 경우에만 실행
+
+- name: 동기화 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ SHOW_PARAMETER_NAME_FILE }}"
+    create: true
+    block: |
+      {{ item.stdout }}
+    marker: "# {mark} 동기화 중지 명령어 결과 백업"
+  loop: "{{ result.results }}"
+  loop_control:
+    label: "{{ item.item.oracle_sid }}"
+  when: item.stdout is defined
+  delegate_to: localhost
+  
+# #기존 코드
+# - name: 동기화 중지
+#   shell: su - oracle -c "{{ sync_stop_sh }}"
+#   register: result
+
+# - name: 동기화 중지 명령어 결과 백업 ---> localhost
+#   blockinfile:
+#     path: "{{ BACKUP_DIR }}/{{ SHOW_PARAMETER_NAME_FILE }}"
+#     create: true
+#     block: |
+#       {{ result.stdout }}
+#     marker: "# {mark} 동기화 중지 명령어 결과 백업"
+#   register: blockinfile_result
+#   delegate_to: localhost

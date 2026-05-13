@@ -1,0 +1,84 @@
+---
+- name: 명령어 사용 결과 보고서 생성
+  hosts: all
+  gather_facts: false
+  ignore_errors: true
+  ignore_unreachable: true
+
+  vars_files:
+    - "../vars/common.yml"
+    - "../vars/command_list.yml"
+
+  pre_tasks:
+    - name: merged 변수 초기화
+      set_fact:
+        merged: []
+
+    - name: 연결 상태 점검
+      include_tasks: "../tasks/con_check.yml"
+
+  tasks:
+    - name: 명령어 사용 작업 시작
+      include_tasks: "../tasks/command_check.yml"
+      loop: "{{ active_command_list }}"
+      loop_control:
+        loop_var: current_check_command
+        index_var: current_check_index
+      vars:
+        current_command_text: >-
+          {{
+            current_check_command.command
+            if current_check_command is mapping and current_check_command.command is defined
+            else current_check_command
+          }}
+      when:
+        - >-
+          {{
+            (
+              x_commands
+              | default([], true)
+              | select('in', current_command_text)
+              | list
+              | length
+            ) == 0
+          }}
+
+    - name: Save report data
+      connection: local
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: /usr/bin/python3
+      fap.common.save_data:
+        content:
+          data_list: "{{ merged }}"
+        protocol: http
+        hostname: "{{ inventory_hostname }}"
+        data_type: "{{ data_type }}"
+        data_key: "{{ data_key }}"
+        template_id: "{{ fap.template_id | default(omit) }}"
+        job_id: "{{ fap.job_id | default(omit) }}"
+      register: db_save
+      when: merged is defined and (merged | length) > 0
+
+  post_tasks:
+    - name: 보고서 데이터 통합
+      set_fact:
+        aggregated:
+          data_list: >-
+            {{
+              ansible_play_hosts_all
+              | map('extract', hostvars, 'merged')
+              | select('defined')
+              | list
+              | flatten
+            }}
+      run_once: true
+      delegate_to: localhost
+
+    - name: 보고서 생성
+      include_tasks: "../tasks/make_report.yml"
+      run_once: true
+      when:
+        - aggregated is defined
+        - aggregated.data_list is defined
+        - (aggregated.data_list | length) > 0

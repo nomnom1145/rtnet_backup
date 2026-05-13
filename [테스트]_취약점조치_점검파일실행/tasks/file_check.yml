@@ -1,0 +1,25 @@
+### 취약점 점검/조치에 사용할 스크립트 파일 압축 파일 여부 확인 및 압축 해제를 하는 task 입니다.
+---
+- name: 패치 파일 존재 여부 확인
+  raw: "ls -al /home/fap/patch_test/PATCH_SCRIPTS_20260330.zip"
+  register: patch_file_check
+
+- name: 파일 존재 여부 확인 디버그
+  debug:
+    var: patch_file_check.stdout
+
+- name: 압축 해제 결과 확인
+  raw: "ls -al /home/fap/patch_test/U-*"
+  register: unzip_file_check
+  failed_when: false
+
+- name: 파일 압축 해제
+  raw: cd /home/fap/patch_test/ && unzip -o PATCH_SCRIPTS_20260330.zip
+  register: unzip_test
+  when: 
+    - patch_file_check.stdout is defined # 패치 파일이 있고
+    - unzip_file_check.rc !=0 # U- 파일이 존재하지 않을때 (ls 결과가 에러 날때)
+
+- name: 압축 해제 디버그
+  debug:
+    var: unzip_test

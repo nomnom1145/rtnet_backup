@@ -1,0 +1,86 @@
+# ---
+# - name: 잠시 대기
+#   raw: "sleep 3"
+#   when:
+#     - job_info is defined
+#     - job_info.content_value is defined
+#     - job_info.content_value.data_list is defined
+#     - (job_info.content_value.data_list | length) > 0
+
+# - name: Write job_info JSON to a temp file
+#   delegate_to: localhost
+#   copy:
+#     content: "{{ job_info | to_json }}"
+#     dest: "/tmp/job_info_{{ job_info.job_id }}.json"
+#   when:
+#     - job_info is defined
+#     - job_info.content_value is defined
+#     - job_info.content_value.data_list is defined
+#     - (job_info.content_value.data_list | length) > 0
+
+# - name: Excel 보고서 생성
+#   delegate_to: localhost
+#   command: >
+#     /usr/bin/python3
+#     /fap/ansible/projects/[테스트]_취약점조치_점검파일실행/vars/job_report_template_writer.py
+#     /tmp/job_info_{{ job_info.job_id }}.json
+#   when:
+#     - job_info is defined
+#     - job_info.content_value is defined
+#     - job_info.content_value.data_list is defined
+#     - (job_info.content_value.data_list | length) > 0
+
+# - name: Remove temporary job_info file
+#   delegate_to: localhost
+#   file:
+#     path: "/tmp/job_info_{{ job_info.job_id }}.json"
+#     state: absent
+#   when:
+#     - job_info is defined
+#     - job_info.content_value is defined
+#     - job_info.content_value.data_list is defined
+#     - (job_info.content_value.data_list | length) > 0
+
+
+---
+- name: 잠시 대기
+  raw: "sleep 3"
+  when:
+    - job_info is defined
+    - job_info.content_value is defined
+    - job_info.content_value.data_list is defined
+    - (job_info.content_value.data_list | length) > 0
+
+- name: Write job_info JSON to a temp file
+  delegate_to: localhost
+  copy:
+    content: "{{ job_info | to_json }}"
+    dest: "/tmp/job_info_{{ job_info.job_id }}.json"
+  when:
+    - job_info is defined
+    - job_info.content_value is defined
+    - job_info.content_value.data_list is defined
+    - (job_info.content_value.data_list | length) > 0
+
+- name: Excel 보고서 생성
+  delegate_to: localhost
+  command: >
+    /usr/bin/python3
+    {{ playbook_dir }}/../vars/job_report_template_writer.py
+    /tmp/job_info_{{ job_info.job_id }}.json
+  when:
+    - job_info is defined
+    - job_info.content_value is defined
+    - job_info.content_value.data_list is defined
+    - (job_info.content_value.data_list | length) > 0
+
+- name: Remove temporary job_info file
+  delegate_to: localhost
+  file:
+    path: "/tmp/job_info_{{ job_info.job_id }}.json"
+    state: absent
+  when:
+    - job_info is defined
+    - job_info.content_value is defined
+    - job_info.content_value.data_list is defined
+    - (job_info.content_value.data_list | length) > 0

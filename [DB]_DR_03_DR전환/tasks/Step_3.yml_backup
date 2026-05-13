@@ -1,0 +1,319 @@
+---
+# 로그 저장 디렉토리 생성
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+- name: oracle home 수집
+  raw: |
+    source /home/oracle/.bash_profile
+    echo $ORACLE_HOME
+  register: oraclehome
+
+- name: oracle home 변수 변경
+  set_fact:
+    ORACLE_HOME: "{{ oraclehome.stdout.split() | join('') }}"
+
+# 기존 IP 통신 확인
+# - name: 기존 IP 통신 확인
+#   wait_for:
+#     host: "{{ item.ip }}"
+#     port: 22
+#     state: stopped
+#     timeout: 120  # 2분
+#   register: wait_check
+#   loop: "{{ DR_DB_IP_EXE_LIST }}"
+#   when: item.eth != ""
+#   delegate_to: localhost
+
+# step3. 1작업
+- name: DR DB IP 기동
+  raw: "/usr/sbin/ifconfig {{ item.eth }} {{ item.ip }}/24 up"
+  loop: "{{ DR_DB_IP_EXE_LIST }}"
+  register: DR_DB_IP_EXE_RESULT
+  when: item.eth != ""
+
+- name: DR DB IP 확인
+  raw: /usr/sbin/ifconfig -a
+  register: result_DR_DB_IP_EXE
+
+- name: DB IP 기동 결과 추출
+  set_fact:
+    result_dr_db_ip_exe: "{{ result_dr_db_ip_exe|default([]) + [ item.stdout ] }}"
+  loop: "{{ DR_DB_IP_EXE_RESULT.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.item.eth != ""
+
+- name: DB IP 목록 결과 추출
+  set_fact:
+    result_dr_db_ip_exe: "{{ result_dr_db_ip_exe|default([]) + [ result_DR_DB_IP_EXE.stdout ] }}"
+
+- name: 동기화 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_DB_IP_EXE_FILE }}"
+    create: true
+    block: |
+      {{ result_dr_db_ip_exe|join('\n') }}
+    marker: "# {mark} 동기화 중지 명령어 결과 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step3. 2작업 - 디비 모드 변경
+- name: DR DB Read Write 모드 변경 및 리스너 설정 추가
+  raw: su - "{{ item.oracle_user }}" -c "{{ read_write_sh }}"
+  loop: "{{ ORACLE }}"
+  loop_control: 
+    label: "{{ item.oracle_sid }}"
+  when: item.oracle_sid != ""
+  register: result
+
+- name: DR DB Read Write 모드 변경 및 리스너 설정 추가 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_DB_READ_WRITE_FILE }}"
+    create: true
+    block: |
+      {{ item.stdout }}
+    marker: "# {mark} DR DB Read Write 모드 변경 및 리스너 설정 추가 결과 백업"
+  loop: "{{ result.results }}"
+  loop_control:
+    label: "{{ item.item.oracle_sid }}"
+  when: item.stdout is defined
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step3.3 작업 - 리스너 파일 확인, 미 존재 시 작업 중단
+# - name: "{{ LISTENER_ORA }}, {{ LISTENER_ORA_DR }} 파일 확인"
+#   raw: "find {{ ORACLE_HOME }}/network/admin/{{ LISTENER_ORA }} 2>/dev/null | wc -l"
+#   register: result_listener_ora
+
+- name: "{{ LISTENER_ORA_DR }} 파일 확인"
+  raw: "find {{ ORACLE_HOME }}/network/admin/{{ LISTENER_ORA_DR }} 2>/dev/null | wc -l"
+  register: result_listener_ora_dr
+
+- name: "{{ LISTENER_ORA_DR }} 파일 내용 확인"
+  raw: "cat {{ ORACLE_HOME }}/network/admin/{{ LISTENER_ORA_DR }}"
+  register: cat_result_listener_ora_dr
+
+- name: "작업 중단 여부 확인(판단기준: {{ LISTENER_ORA }}, {{ LISTENER_ORA_DR }} 파일 존재여부)"
+  fail:
+    msg: "listener.ora_dr 파일 미존재"
+  when: result_listener_ora_dr.stdout | int == 0
+
+# step3.4 작업 - 기존 IP ARP 초기화 후 통신 확인
+- name: 통신 확인
+  wait_for:
+    host: "{{ item.ip }}"
+    port: 22
+    state: started
+    timeout: 3600
+  loop: "{{ DR_DB_IP_EXE_LIST }}"
+  loop_control:
+    label: "{{ item.ip }}"
+  when: item.eth != ""
+  delegate_to: localhost
+
+# step3. 5작업 - 테스트로 제외, Kill로 프로세스 다운 시 디비 자동 기동 됨
+# - name: DR DB lsnrctl Kill 중지
+#   raw: "{{ tnslsnr_kill }}"
+#   register: result_stop
+
+# - name: lsnrctl stop 명령어 로그 저장 ---> localhost
+#   blockinfile:
+#     path: "{{ BACKUP_DIR }}/{{ LSNCRCTL_STATUS }}"
+#     create: true
+#     block: |
+#       {{ result_stop.stdout }}
+#     marker: "# {mark} lsnrctl stop 명령어 결과 백업"
+#   register: blockinfile_result
+#   delegate_to: localhost
+
+# step3. 5작업 - 디비 리스너, crs, PS 중지 확인
+- name: 리스너 중지
+  raw: |
+    source ~/.bash_profile
+    srvctl stop listener -l LISTENER
+  register: result_stop
+  ignore_errors: true
+
+- name: crsctl status 확인
+  raw: |
+    source ~/.bash_profile
+    crsctl stat res -t | awk '
+      /^[a-z]/ {res=$0; next}
+      /^[[:space:]]+[A-Z]+/ {
+        if (res ~ /LISTENER/) {
+          print res " " $0
+        }
+      }'
+  register: listener_stop_status
+  until: >
+    listener_stop_status.stdout_lines[1].split()[1] == "OFFLINE"
+    and
+    listener_stop_status.stdout_lines[1].split()[2] == "OFFLINE"
+  retries: 30
+  delay: 2
+  ignore_errors: true
+
+- name: 리스너 상태 확인
+  raw: |
+    source ~/.bash_profile
+    srvctl status listener -l LISTENER | tail -1
+  retries: 30
+  delay: 2
+  until: |
+    'not running' in srvctl_stop_status.stdout or
+    'LISTENER 리스너가 실행 중이 아닙니다.' in srvctl_stop_status.stdout
+  register: srvctl_stop_status
+
+- name: tns process check
+  raw: |
+    source ~/.bash_profile
+    ps -ef | grep -i tnslsnr | grep -v grep
+  register: tns_stop_status
+  ignore_errors: true
+  failed_when: false
+
+- name: 리스너 중지결과 비정상 
+  fail:
+    msg: |
+      리스너 비정상 종료 확인
+      crsctl status: {{ listener_stop_status.stdout_lines[1] }}
+      srvctl ststus: {{ srvctl_stop_status.stdout }}
+      tns status: {{ tns_stop_status.stdout }}
+  when: >
+    listener_stop_status.stdout_lines[1].split()[1] != "OFFLINE" or
+    listener_stop_status.stdout_lines[1].split()[2] != "OFFLINE" or
+    (
+      'LISTENER 리스너가 실행 중이 아닙니다' not in srvctl_stop_status.stdout and
+      'not running' not in srvctl_stop_status.stdout
+    ) or
+    'tnslsnr' in tns_stop_status.stdout
+
+- name: crs 및 리스너 종료 상태 명령어 로그 저장 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ LSNCRCTL_STATUS }}"
+    create: true
+    block: |
+      리스너 종료 상태(crsctl status)
+      {{ listener_stop_status.stdout }}
+      리스너 종료 상태(svrctl status)
+      {{ srvctl_stop_status.stdout }}
+    marker: "# {mark} srvctl stop 명령어 결과 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step3, 6작업 - 리스너 파일 변경
+- name: DR DB Read Write 모드 변경 및 리스너 설정 추가
+  raw: |
+    su - oracle -c "cd {{ ORACLE_HOME }}/network/admin && 
+    mv {{ LISTENER_ORA_DR }} {{ LISTENER_ORA }}"
+  when: 
+    - result_listener_ora_dr.stdout | int != 0
+
+# step3.7 작업 리스너 기동 및 확인
+
+- name: 리스너 기동(LSNRCTL)
+  raw: | 
+    su - oracle -c "cd {{ ORACLE_HOME }}/network/admin &&
+    lsnrctl start &&
+    lsnrctl status"
+  register: lsnrctl_result
+
+# - name: 리스너 기동
+#   raw: |
+#     source ~/.bash_profile
+#     srvctl start listener -l LISTENER
+#   register: srvctl_status
+
+# - name: crsctl status 확인
+#   raw: |
+#     source ~/.bash_profile
+#     crsctl stat res -t | awk '
+#       /^[a-z]/ {res=$0; next}
+#       /^[[:space:]]+[A-Z]+/ {
+#         if (res ~ /LISTENER/) {
+#           print res " " $0
+#         }
+#       }'
+#   register: listener_status_output
+#   until: >
+#     listener_status_output.stdout_lines[1].split()[1] == "ONLINE"
+#     and
+#     listener_status_output.stdout_lines[1].split()[2] == "ONLINE"
+#   retries: 30
+#   delay: 2
+#   ignore_errors: true
+
+# - name: srvctl status 확인
+#   raw: |
+#     source ~/.bash_profile
+#     srvctl status listener -l LISTENER
+#   register: srvctl_status
+
+# - name: tns process check
+#   raw: |
+#     source ~/.bash_profile
+#     ps -ef | grep -i tnslsnr | grep -v grep
+#   register: tns_status
+#   ignore_errors: true
+#   failed_when: false
+
+# - name: 리스너 기동 결과 비정상 
+#   fail:
+#     msg: |
+#       리스너 비정상 실행 확인
+#       crsctl status: {{ listener_status_output.stdout_lines[1] }}
+#       srvctl ststus: {{ srvctl_status.stdout }}
+#       tns status: {{ tns_status.stdout }}
+#   when: >
+#     listener_status_output.stdout_lines[1].split()[1] != "ONLINE" or
+#     listener_status_output.stdout_lines[1].split()[2] != "ONLINE" or
+#     (
+#       'LISTENER 리스너가 실행 중이 아닙니다' in srvctl_status.stdout and
+#       'not running' in srvctl_status.stdout
+#     ) or
+#     'tnslsnr' not in tns_status.stdout
+
+- name: lsnrctl start 명령어 로그 저장 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ LSNCRCTL_STATUS }}"
+    create: true
+    block: |
+      리스너 파일 내용(listener.ora_dr)
+      {{ cat_result_listener_ora_dr.stdout }}
+      리스너 상태(lsnrctl status)
+      {{ lsnrctl_result.stdout }}
+    marker: "# {mark} lsnrctl start 명령어 결과 백업"
+  delegate_to: localhost
+  ignore_errors: true
+
+# step3. 8작업 - 리스너 VIP 추가
+- name: Local listener 변경
+  raw: su - "{{ item.oracle_user }}" -c "{{ listener_change }}"
+  loop: "{{ ORACLE }}"
+  loop_control:
+    label: "{{ item.oracle_sid }}"
+  when: item.oracle_sid != ""
+  register: local_listener_result
+
+- name: Local listener 변경 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ local_listener_status }}"
+    create: true
+    block: |
+      {{ item.stdout }}
+    marker: "# {mark} Local listener 변경 결과 백업"
+  loop: "{{ local_listener_result.results }}"
+  loop_control:
+    label: "{{ item.item.oracle_sid }}"
+  when: item.stdout is defined
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step3. cubeone 실행 필요 시 호출
+- name: cubeone 작업 실행
+  include_tasks: ../tasks/cubeone_task.yml
+  when: CUBEONE_WORK in ['y','Y']

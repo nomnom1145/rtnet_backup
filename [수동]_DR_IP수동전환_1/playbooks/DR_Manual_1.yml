@@ -1,0 +1,78 @@
+---
+- name: DR_Manual_1
+  hosts: all
+  gather_facts: false
+  tasks:
+  - name: 일시 생성
+    set_fact:
+      today: "{{ lookup('ansible.builtin.pipe', 'date +%y%m%d') }}"
+    delegate_to: localhost
+    run_once: true
+
+  - name: 변수 파일 호출
+    include_vars: ../vars/DR_Manual_vars01.yml
+
+  - name: Active1 DB 호스트 정보
+    debug: 
+      msg:
+      - "Active DB 정보"
+      - "IP: {{ FIRST_ACTIVE_DB_IP }}"
+      - "HOSTNAME: {{ fap.host_name }}"
+    when: fap.host_ip == FIRST_ACTIVE_DB_IP | default('none')
+
+  - name: Active2 DB 호스트 정보
+    debug: 
+      msg:
+      - "Active2 DB 정보"
+      - "IP: {{ SECOND_ACTIVE_DB_IP }}"
+      - "HOSTNAME: {{ fap.host_name }}"
+    when: fap.host_ip == SECOND_ACTIVE_DB_IP | default('none')
+    
+  # - name: 통신 확인
+  #   wait_for:
+  #     host: "{{ PING_IP }}"
+  #     port: 22
+  #     state: started
+  #     timeout: 3600
+  #   delegate_to: localhost
+    
+  - name: DR if down
+    raw: /usr/sbin/ifdown lo:0
+    register: ifdown_result
+    when: IFDOWN_FLAG | default("N") == "Y"
+
+  - name: lo:0 down 결과 확인
+    raw: /usr/sbin/ifconfig -a
+    register: ifconfig_result
+    when: IFDOWN_FLAG | default("N") == "Y"
+    
+  - name: ifdown 결과
+    debug:
+      msg: "{{ ifconfig_result.stdout }}"
+    when: IFDOWN_FLAG | default("N") == "Y"
+    
+  # - name: 버퍼 저장(OS 종료 전 수행)
+  #   raw: sync;sync;sync
+  #   when: SHUTDOWN_FLAG | default("N") == "Y"
+    
+  - name: OS 종료
+    raw: /sbin/shutdown -h now
+    ignore_unreachable: true
+    ignore_errors: true
+    failed_when: false
+    when: SHUTDOWN_FLAG | default("N") == "Y"
+    
+  - name: 통신 확인(통신 실패 시 정상)
+    wait_for:
+      host: "{{ item }}"
+      port: 22
+      state: stopped
+      timeout: 1200
+    loop: 
+      - "{{ FIRST_ACTIVE_DB_IP }}"
+      - "{{ SECOND_ACTIVE_DB_IP }}"
+    delegate_to: localhost
+    
+  - name: 작업 완료
+    debug:
+      msg: "DR IP 수동전환_1 완료"

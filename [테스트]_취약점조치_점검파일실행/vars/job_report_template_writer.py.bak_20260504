@@ -1,0 +1,100 @@
+import json
+import os
+import sys
+from copy import copy
+from datetime import datetime
+from typing import Any, Dict, List
+
+try:
+    from openpyxl import load_workbook
+    from openpyxl.styles import Alignment
+except ImportError as exc:
+    print(
+        "ERROR: openpyxl 패키지가 필요합니다. "
+        "예: pip install openpyxl",
+        file=sys.stderr,
+    )
+    raise
+
+
+TEMPLATE_PATH = "/fap/report/make_report/templates/check_templates_260428.xlsx"
+DEFAULT_OUTPUT_DIR = "/fap/report/취약점_점검"
+
+SHEET_NAME = "Sheet1"
+HEADER_ROW = 2
+DATA_START_ROW = 3
+START_COL = 2  # B
+END_COL = 5    # E
+
+
+def load_input(arg: str) -> Dict[str, Any]:
+    if os.path.isfile(arg):
+        with open(arg, "r", encoding="utf-8") as file:
+            return json.load(file)
+    return json.loads(arg)
+
+
+def extract_content_value(payload: Dict[str, Any]) -> Dict[str, Any]:
+    if "content_value" in payload:
+        return payload["content_value"] or {}
+    if "job_info" in payload and isinstance(payload["job_info"], dict):
+        return payload["job_info"].get("content_value", {}) or {}
+    if "data_list" in payload:
+        return payload
+    return {}
+
+
+def coerce_result_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "\n".join("" if item is None else str(item) for item in value)
+    return str(value)
+
+
+def get_result_text(entry: Dict[str, Any]) -> str:
+    for key in ("result", "output", "stdout", "message", "stderr"):
+        if key in entry and entry.get(key) is not None:
+            return coerce_result_text(entry.get(key)).strip()
+    return ""
+
+
+def infer_action_required(entry: Dict[str, Any], result_text: str) -> str:
+    explicit = entry.get("action_required")
+    if explicit is None:
+        explicit = entry.get("need_action")
+    if explicit is None:
+        explicit = entry.get("is_action_required")
+
+    if explicit is not None:
+        if isinstance(explicit, bool):
+            return "필요" if explicit else "불필요"
+        text = str(explicit).strip().lower()
+        if text in {"y", "yes", "true", "1", "need", "required", "필요"}:
+            return "필요"
+        if text in {"n", "no", "false", "0", "none", "불필요"}:
+            return "불필요"
+
+    upper_text = result_text.upper()
+    if "[FAIL]" in upper_text or "FAIL" in upper_text:
+        return "필요"
+    if "[PASS]" in upper_text and "[FAIL]" not in upper_text:
+        return "불필요"
+
+    rc = entry.get("rc")
+    if isinstance(rc, int):
+        return "필요" if rc != 0 else "불필요"
+
+    return ""
+
+
+def normalize_entries(content_value: Dict[str, Any]) -> List[Dict[str, Any]]:
+    data_list = content_value.get("data_list", [])
+    normalized: List[Dict[str, Any]] = []
+
+    for index, entry in enumerate(data_list, start=1):
+        if not isinstance(entry, dict):
+            continue
+
+        script_name = (
+            entry.get("script_name")

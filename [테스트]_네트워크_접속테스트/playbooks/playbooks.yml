@@ -1,0 +1,21 @@
+---
+- name: playbooks
+  hosts: all
+  gather_facts: false
+  vars:
+    ansible_ssh_common_args: >-
+      -o MACs=hmac-sha1,hmac-sha1-96,hmac-md5,hmac-md5-96
+      -o KexAlgorithms=+diffie-hellman-group1-sha1
+      -o HostKeyAlgorithms=+ssh-rsa
+      -o PubkeyAcceptedAlgorithms=+ssh-rsa
+
+  tasks:
+    - name: 접속 테스트
+      cli_command:
+        command: "show version"
+      register: test
+
+    - name: 디버그
+      debug:
+        msg:
+          - "버전은 {{ test.stdout.split()[0] }}"

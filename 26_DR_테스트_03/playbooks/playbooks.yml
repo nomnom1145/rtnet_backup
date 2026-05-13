@@ -1,0 +1,31 @@
+---
+- name: playbooks
+  hosts: all
+  gather_facts: false
+  ignore_errors: true
+  vars:
+    FIRST_IP: "{{ fap.host_vars.first_ip | default(none) }}"
+    SECOND_IP: "{{ fap.host_vars.second_ip | default(none) }}"
+    THIRD_IP: "{{ fap.host_vars.third_ip | default(none) }}"
+    FOURTH_IP: "{{ fap.host_vars.fourth_ip | default(none) }}"  
+  tasks:
+    - name: "디버깅 - 호스트 IP와 명령어 리스트"
+      raw: "hostname -I"
+      register: host_ip
+
+    - name: 작성 변수 확인
+      debug:
+        msg:
+          - "1번 호스트 IP: {{ FIRST_IP }}"
+          - "2번 호스트 IP: {{ SECOND_IP }}"
+          - "3번 호스트 IP: {{ THIRD_IP }}"
+          - "4번 호스트 IP: {{ FOURTH_IP }}"
+          
+    - name: 메세지 출력
+      debug:
+        msg: "3번 작업 성공"
+      when: host_ip.stdout is defined and host_ip.stdout | length > 0
+
+    - name: 3번 작업 결과
+      debug:
+        msg: "호스트 IP: {{ host_ip.stdout }}"

@@ -1,0 +1,6 @@
+---
+FIRST_ACTIVE_DB_IP: "{{ fap.host_vars.first_active_db_ip | default(none) }}"
+SECOND_ACTIVE_DB_IP: "{{ fap.host_vars.second_active_db_ip | default(none) }}"
+PING_IP: "{{ fap.host_vars.ping_ip | default(none) }}"
+IFDOWN_FLAG: "{{ fap.host_vars.ifdown_flag | default(none) }}"
+SHUTDOWN_FLAG: "{{ fap.host_vars.shutdown_flag | default(none) }}"

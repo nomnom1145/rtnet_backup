@@ -1,0 +1,75 @@
+---
+- name: DR_CHECK_PATH 경로 수집
+  raw: |
+    DR_CHECK_PATH=$(su - "{{ ORACLE[0].oracle_user }}" -c 'echo $HOME')
+    echo $DR_CHECK_PATH
+  register: db_check_home
+
+- name: DR_CHECK_PATH 경로 정의
+  set_fact: 
+    DR_CHECK_PATH: "{{ db_check_home.stdout.split() | join('') }}/work"
+
+### 리스너 2개 이상
+- name: DR_CHECK_PATH 경로 수집
+  raw: |
+    DR_CHECK_PATH=$(su - "{{ ORACLE[1].oracle_user }}" -c 'echo $HOME')
+    echo $DR_CHECK_PATH
+  register: db_check_home2
+  when: ORACLE[1].oracle_user | default('') | trim != ''
+
+- name: DR_CHECK_PATH 경로 정의
+  set_fact: 
+    DR_CHECK_PATH2: "{{ db_check_home2.stdout.split() | join('') }}/work"
+  when: ORACLE[1].oracle_user | default('') | trim != ''
+
+# 로그 저장 디렉토리 생성
+############# ansible-core 버전 변경 후 수정 #############
+# - name: 복제 상태점검 스크립트 존재확인
+#   stat:
+#     path: "{{ DR_CHECK_PATH }}/{{ item }}"
+#   loop: "{{ DR_CHECK_SCRIPTS }}"
+#   register: result_stat
+############# ansible-core 버전 변경 후 수정 #############
+
+- name: 복제 상태점검 스크립트 존재확인
+  raw: "ls -l {{ DR_CHECK_PATH }}/{{ item }}"
+  loop: "{{ DR_CHECK_SCRIPTS }}"
+  register: result_stat
+
+# step7. 스크립트 점검
+- name: "DB SCRIPT 파일 존재여부 추출"
+  set_fact:
+    file_stat_debug: "{{ file_stat_debug|default([]) + [ item.stdout_lines[0] ] }}"
+    file_stat_bools: "{{ file_stat_bools|default([]) + [ true if item.rc | default(1) == 0 else false ] }}"
+  loop: "{{ result_stat.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: "작업 중단 여부 확인(판단기준: DB SCRIPT 파일 존재여부)"
+  fail:
+    msg: "{{ file_stat_debug }}"
+  when: item == false
+  loop: "{{ file_stat_bools }}"
+
+# step7. 1작업
+- name: DR DB ADG 동기화
+  raw: su - "{{ ORACLE[0].oracle_user }}" -c "{{ db_adg_sync }}"
+  register: result
+
+# ### 리스너 2개 이상
+- name: DR DB ADG 동기화
+  raw: su - "{{ ORACLE[1].oracle_user }}" -c "{{ db_adg_sync2 }}"
+  register: result2
+  when: ORACLE[1].oracle_user | default('') | trim != ''
+
+- name: 동기화 중지 명령어 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_CHECK_FILE }}"
+    create: true
+    block: |
+      {{ result.stdout }}
+      {{ result2.stdout|default(none) }}
+    marker: "# {mark} DR DB 복제 상태 점검 로그 백업"
+  when: item.stdout is defined
+  register: blockinfile_result
+  delegate_to: localhost

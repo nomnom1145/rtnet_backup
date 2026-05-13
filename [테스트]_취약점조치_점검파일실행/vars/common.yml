@@ -1,0 +1,45 @@
+---
+data_type: report
+data_key: linux
+system: linux
+report: SHIN_check
+today: "{{ lookup('pipe', 'date +%Y%m%d') }}"
+file_path: "/fap/report/취약점_점검"
+
+aggregated:
+  data_list: >-
+    {{
+      groups['all']
+      | map('extract', hostvars, 'content')
+      | select('defined')
+      | map(attribute='data_list')
+      | list
+      | sum(start=[])
+    }}
+
+job_info:
+  job_id: "{{ hostvars[groups['all'][0]].fap.job_id }}"
+  content_value: "{{ aggregated }}"
+
+sh_check_list:
+  - U-02_01_CHECK.sh
+  - U-03_01_CHECK.sh
+  - U-06_01_CHECK.sh
+  - U-07_01_CHECK.sh
+  - U-08_01_CHECK.sh
+  - U-09_01_CHECK.sh
+  - U-11_01_CHECK.sh
+  - U-12_01_CHECK.sh
+  - U-15_01_CHECK.sh
+  - U-22_01_CHECK.sh
+  - U-23_01_CHECK.sh
+  - U-45_01_CHECK.sh
+  - U-46_01_CHECK.sh
+  - U-47_01_CHECK.sh
+  - U-48_01_CHECK.sh
+  - U-54_01_CHECK.sh
+  - U-66_01_CHECK.sh
+  - U-69_01_CHECK.sh
+  - WT-02_01_CHECK.sh
+  - WT-04_01_CHECK.sh
+  - WT-09_01_CHECK.sh

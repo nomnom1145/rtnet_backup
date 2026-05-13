@@ -1,0 +1,35 @@
+---
+# 사용 명령어 변수 (아래 형식에 맞춰서 사용 명령어 작성 시 web에서 [변수 설정] 버튼이 생성됨)
+# command_list 내용의 경우 임의로 작성한 시스템에 영향이 가지 않는 조회 명령어
+# command_list:
+# - { id: '0001', name: 'show version', command: 'show version' }
+# - { id: '0002', name: 'show interfaces', command: 'show interfaces' }
+# - { id: '0003', name: 'show running-config', command: 'show running-config' }
+# - { id: '0004', name: 'show ip route', command: 'show ip route' }
+# - { id: '0005', name: 'show clock', command: 'show clock' }
+# - { id: '0006', name: 'show clock detail', command: 'show clock detail' }
+# - { id: '0007', name: 'show clock history', command: 'show clock history' }
+# - { id: '0008', name: 'show ntp status', command: 'show ntp status' }
+# - { id: '0009', name: 'show ntp associations', command: 'show ntp associations' }
+# - { id: '0010', name: 'show ntp status | include synchronized', command: 'show ntp status | include synchronized' }
+# - { id: '0011', name: 'show running-config | include clock', command: 'show running-config | include clock' }
+# - { id: '0012', name: 'show logging', command: 'show logging' }
+# - { id: '0013', name: 'show log', command: 'show log' }
+# - { id: '0014', name: 'show tech-support | include clock', command: 'show tech-support | include clock' }
+# - { id: '0015', name: 'show processes', command: 'show processes' }
+# - { id: '0016', name: 'show ntp associations detail', command: 'show ntp associations detail' }
+# - { id: '0017', name: 'show version | include uptime', command: 'show version | include uptime' }
+# - { id: '0018', name: 'show configuration | include ntp', command: 'show configuration | include ntp' }
+
+# # 금지 명령어 변수 (Command 키워드가 포함되면 실행하지 않음)
+# x_commands:
+# - { id: '0001', name: 'reload', command: 'reload' }
+# - { id: '0002', name: 'shutdown', command: 'shutdown' }
+# - { id: '0003', name: 'conf t', command: 'conf t' }
+# - { id: '0004', name: 'configure terminal', command: 'configure terminal' }
+# - { id: '0005', name: 'config terminal', command: 'config terminal' }
+# - { id: '0006', name: 'reboot', command: 'reboot' }
+# - { id: '0007', name: 'wr', command: 'wr' }
+# - { id: '0008', name: 'copy running-config startup-config', command: 'copy running-config startup-config' }
+# - { id: '0009', name: 'erase startup-config', command: 'erase startup-config' }
+# - { id: '0010', name: 'interfaces', command: 'interfaces' } # 테스트

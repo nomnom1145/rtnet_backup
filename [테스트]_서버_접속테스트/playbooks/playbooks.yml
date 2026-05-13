@@ -1,0 +1,13 @@
+---
+- name: playbooks
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: 접속 테스트
+      raw: "hostname -I"
+      register: test
+
+    - name: 디버그
+      debug:
+        msg:
+          - "ip는 {{ test.stdout.split()[0] }} 입니다."

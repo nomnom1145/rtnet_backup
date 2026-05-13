@@ -1,0 +1,61 @@
+---
+- name: 명령어 실행/금지 사용 플레이북
+  hosts: all
+  gather_facts: false
+  ignore_errors: true
+  vars:
+    os_type: "{{ ansible_network_os2 | default('') }}"
+    ansible_network_cli_ssh_type: paramiko
+    legacy_ssh_common_args: >-
+      -o MACs=hmac-sha1,hmac-sha1-96,hmac-md5,hmac-md5-96
+      -o KexAlgorithms=+diffie-hellman-group1-sha1
+      -o HostKeyAlgorithms=+ssh-rsa
+      -o PubkeyAcceptedAlgorithms=+ssh-rsa
+    ansible_ssh_common_args: "{{ legacy_ssh_common_args }}"
+
+  vars_files:
+    - "../vars/common.yml"
+
+  module_defaults:
+    fap.common.exec_command:
+      fap_vars: "{{ fap }}"
+      protocol: auto
+      ip: "{{ inventory_hostname }}"
+      result_type: cli_data
+      user_id: "{{ ansible_user | default('') }}"
+      user_password: "{{ ansible_password | default('') }}"
+      become_method: "{{ ansible_become_method | default('') }}"
+      become_password: "{{ ansible_become_password | default('') }}"
+      network_os: "{{ ansible_network_os2 }}"
+      ssh_common_args: "{{ legacy_ssh_common_args }}"
+
+  pre_tasks:
+    - name: 초기 merged 초기화
+      set_fact:
+        merged: []
+
+  tasks:
+    - name: 작업 대상 변수 확인
+      include_tasks: "../tasks/os_vars_check.yml"
+
+    - name: 작업 실행
+      include_tasks: "../tasks/network_check.yml"
+
+    - name: DB 저장
+      fap.common.save_data:
+        content:
+          data_list: "{{ merged }}"
+        protocol: http
+        hostname: "{{ inventory_hostname }}"
+        data_type: report
+        data_key: "{{ system }}"
+        template_id: "{{ fap.template_id | default(omit) }}"
+        job_id: "{{ fap.job_id | default(omit) }}"
+      delegate_to: localhost
+      register: db_save
+      when: merged is defined and (merged | length) > 0
+
+    - name: 보고서 생성
+      include_tasks: ../tasks/make_report.yml
+      register: make_report_test
+      when: db_save is defined

@@ -1,0 +1,26 @@
+---
+- name: 잠시 대기
+  raw: "sleep 3"
+  when: merged is defined
+
+- name: Write job_info JSON to a temp file # json으로 변환 후 실행된 모든 결과를 보고서에 넣는다. 작성한 명령어 실행 순서대로 보고서에 넣기 위해서
+  delegate_to: localhost
+  copy:
+    content: "{{ job_info | to_json }}"
+    dest: "/tmp/job_info_{{ job_info.job_id }}.json"
+  when: merged is defined
+
+- name: Excel 보고서 생성
+  delegate_to: localhost
+  command: > # 프로젝트명 수정 필요, /fap/ansible/projects/{{ 프로젝트명 }}/vars/shin_template.py
+    /usr/bin/python3
+    /fap/ansible/projects/[네트워크]_금지명령어/vars/shin_template.py
+    /tmp/job_info_{{ job_info.job_id }}.json
+  when: merged is defined
+
+- name: Remove temporary job_info file
+  delegate_to: localhost
+  file:
+    path: "/tmp/job_info_{{ job_info.job_id }}.json"
+    state: absent
+  when: merged is defined

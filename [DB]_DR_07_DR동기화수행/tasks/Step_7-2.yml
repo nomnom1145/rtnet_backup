@@ -1,0 +1,25 @@
+---
+- name: DR DB 복제 상태 점검
+  raw: su - {{ ORACLE[0].oracle_user }} -c "{{ db_copy }}"
+  register: result
+
+# ## 리스너 2개 이상
+- name: DR DB 복제 상태 점검
+  raw: su - {{ ORACLE[1].oracle_user }} -c "{{ db_copy2 }}"
+  register: result2
+  when: ORACLE[1].oracle_user | default('') | trim != ''
+
+# - name: "DR DB 복제 상태 점검 추출"
+#   set_fact:
+#    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'DR DB 복제 상태 점검'  + '='*30 + '\n' + result.stdout ] }}"
+
+- name: DR DB 복제 상태 점검 로그 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_CHECK_FILE }}"
+    create: true
+    block: |
+      {{ result.stdout }}
+      {{ result2.stdout|default(none) }}
+    marker: "# {mark} DR DB 복제 상태 ({{ item.item.oracle_sid }})"
+  delegate_to: localhost
+  when: item.stdout is defined

@@ -1,0 +1,12 @@
+---
+- name: Cisco 작업 실행
+  include_tasks: "../tasks/cisco.yml"
+  when: os_type == 'cisco'
+
+- name: Aruba 작업 실행
+  include_tasks: "../tasks/aruba.yml"
+  when: os_type == 'aruba'
+
+- name: Aruba 작업 실행(2930F)
+  include_tasks: "../tasks/aruba_2930F.yml"
+  when: os_type == 'aruba_2930F'

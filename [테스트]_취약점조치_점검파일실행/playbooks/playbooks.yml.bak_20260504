@@ -1,0 +1,29 @@
+### 2026-04-28 장상기
+---
+- name: 네트워크파트 FALCON 서버 취약점 점검
+  hosts: all
+  gather_facts: false
+  ignore_errors: true
+  vars_files:
+    - "../vars/common.yml" # 공통 변수
+  tasks:
+    - name: 점검 파일 확인 # 취약점 점검 압축 파일 존재 확인 단계
+      include_tasks: "../tasks/file_check.yml"
+      register: patch_file_check
+
+    - name: 점검 파일 실행 # 점검 파일 실행 단계
+      include_tasks: "../tasks/check_test.yml"
+      register: check_file_active
+      when: patch_file_check.stdout is defined
+
+    - name: save to db
+      fap.common.save_data:
+        protocol: http
+        fap_vars: "{{ fap }}"
+        hostname: "{{ inventory_hostname }}"
+        template_id: "{{ fap.template_id | default(omit) }}"
+        job_id: "{{ fap.job_id | default(omit) }}"
+        data_type: "{{ data_type }}"
+        data_key: "{{ system }}"
+        content: "{{ content }}"
+      delegate_to: localhost

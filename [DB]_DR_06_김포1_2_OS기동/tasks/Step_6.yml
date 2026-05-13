@@ -1,0 +1,175 @@
+---
+# 로그 저장 디렉토리 생성
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+- name: crs status check
+  raw: |
+    source ~/.bash_profile
+    crsctl check crs
+  register: command_result
+
+# step6. 1작업
+- name: CRS 기동
+  raw: |
+    source ~/.bash_profile &&
+    crsctl enable crs &&
+    crsctl start crs
+  args:
+    executable: /bin/bash
+  register: result_crsctl
+  when: |
+    'CRS-4638' not in command_result.stdout and
+    'CRS-4537' not in command_result.stdout and
+    'CRS-4529' not in command_result.stdout and
+    'CRS-4533' not in command_result.stdout
+
+- name: crs status check
+  raw: |
+    source ~/.bash_profile
+    crsctl check crs
+  register: command_result
+  until: |
+    'CRS-4638' in command_result.stdout and
+    'CRS-4537' in command_result.stdout and
+    'CRS-4529' in command_result.stdout and
+    'CRS-4533' in command_result.stdout
+  retries: 60
+  delay: 10
+
+- name: crsctl status 확인
+  raw: |
+    source ~/.bash_profile
+    crsctl status res -t
+  register: crsctl_status
+
+- name: 김포 DB 복원 정보 저장
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DB_RECOVERY_FILE }}"
+    create: true
+    block: |
+      {{ result_crsctl.stdout | default("프로세스가 실행중입니다.") }}
+    marker: "# {mark} 김포 DB 복원 로그 백업"
+  delegate_to: localhost
+
+- name: crsctl status 정보 추출
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'crsctl status' + '='*30 + '\n' + crsctl_status.stdout ] }}"
+
+# step6. 2작업
+- name: "DB 가동상태 확인"
+  raw: su - "{{ item.oracle_user }}" -c "{{ status_sh }}"
+  register: result_status
+  loop: "{{ ORACLE }}"
+  loop_control:
+    label: "{{ item.oracle_sid }}"
+  when: item.oracle_sid != ""  # ORACLE_SID가 정의된 경우에만 실행
+
+- name: DB 가동
+  raw: su - "{{ item.item.oracle_user }}" -c "{{ startup_sh }}"
+  register: result
+  loop: "{{ result_status.results }}"
+  loop_control:
+    label: "{{ item.item.oracle_sid }}"
+  when: 
+    - item.item.oracle_sid != ''
+    - not (item.stdout | regex_search('OPEN|MOUNTED|STARTED'))
+
+# - name: "DB 가동 후 상태 확인"
+#   raw: su - "{{ item.oracle_user }}" -c "{{ status_sh }}"
+#   register: result_status
+#   loop: "{{ ORACLE }}"
+#   loop_control:
+#     label: "{{ item.oracle_sid }}"
+#   when: item.oracle_sid != ""  # ORACLE_SID가 정의된 경우에만 실행
+
+- name: "DB 가동 후 상태 확인"
+  raw: su - "{{ item.oracle_user }}" -c "{{ status_sh }}"
+  register: result_status
+  loop: "{{ ORACLE }}"
+  loop_control:
+    label: "{{ item.oracle_sid }}"
+  when: item.oracle_sid != ""
+  until: "'OPEN' in result_status.stdout_lines"
+  retries: 3
+  delay: 10
+  ignore_errors: true
+
+- name: DB 가동 여부 검사 --- cannot 문자열 포함 시, 작업 중단
+  fail:
+    msg: 
+      - "DB 가동 상태 확인 필요"
+      - "{{ item.stdout }}"
+  loop_control:
+    label: "{{ item.item.oracle_sid }}"
+  loop: "{{ result_status.results }}"
+  when: 
+    - item.stdout is defined
+    - not (item.stdout | regex_search('OPEN|MOUNTED|STARTED'))
+
+- name: 김포 DB 복원 정보 추출
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'DB startup' + '='*30 + '\n' + item.stdout ] }}"
+  loop: "{{ result.results }}"
+  loop_control:
+    label: "{{ item.item.item.oracle_sid }}"
+  when: item.stdout is defined
+
+# step6. 3작업
+- name: 프로세스 기동 확인 - 1
+  raw: su - oracle -c "{{ item }}"
+  loop: "{{ DR_DB_CEHCK_CMD }}"
+  register: result_ps
+  loop_control:
+    label: "{{ item }}"
+
+- name: 프로세스 추출 - 1
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + item.item + '='*30 +'\n' + item.stdout ] }}"
+  loop: "{{ result_ps.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: SQL dual 시간 확인
+  raw: su - oracle -c "{{ dual_sh }}"
+  register: result_ps
+
+- name: SQL dual 시간 확인 추출
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'DB날짜 쿼리' + '='*30 + '\n' + result_ps.stdout ] }}"
+
+# step6. 4작업
+- name: bdump 로그 확인
+  raw: |
+    source /home/oracle/.bash_profile
+    bdump
+    dump_dir=$(pwd)
+    su - oracle -c "tail -100 $dump_dir/alert*.log"
+  register: bdump_result
+
+- name: "bdump 로그 확인"
+  set_fact:
+    db_recovery_results: "{{ db_recovery_results|default([]) + [ '='*30 + 'bdump 로그 확인'  + '='*30 + '\n' + bdump_result.stdout ] }}"
+
+### join 제거 후 테스트 필요
+- name: 김포 DB 복원 로그 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DB_RECOVERY_FILE }}"
+    create: true
+    block: |
+      {{ db_recovery_results|join('\n') }}
+    marker: "# {mark} 김포 DB 복원 로그 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step6. cubeone 실행 필요 시 호출
+#- name: cubeone 실행
+#  include_tasks: ../tasks/cubeone_task.yml
+#  when: CUBEONE_WORK in ['y','Y']
+
+- name: 김포 DB 복원 로그 백업 경로 출력
+  debug:
+    msg: "{{ blockinfile_result.diff[0].after_header }}"

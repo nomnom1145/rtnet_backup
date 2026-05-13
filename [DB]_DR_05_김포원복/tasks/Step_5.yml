@@ -1,0 +1,232 @@
+---
+# 로그 저장 디렉토리 생성
+- name: 백업 디렉토리 생성
+  file:
+    path: "{{ BACKUP_DIR }}"
+    state: directory
+  delegate_to: localhost
+
+# step5. cubeone 중지 필요 시 호출
+- name: cubeone 작업 실행
+  include_tasks: ../tasks/cubeone_task.yml
+  when: CUBEONE_WORK in ['y','Y']
+
+- name: oracle home 수집
+  raw: |
+    ORACLE_HOME=$(su - "{{ ORACLE[0].oracle_user }}" -c 'echo $ORACLE_HOME')
+    echo $ORACLE_HOME
+  register: oraclehome
+
+- name: oracle home 변수 변경
+  set_fact:
+    ORACLE_HOME: "{{ oraclehome.stdout.split() | join('') }}"
+
+########## oracle 계정이 2개 이상일 경우 ####################
+
+- name: oracle home 수집
+  raw: |
+    ORACLE_HOME=$(su - "{{ ORACLE[1].oracle_user }}" -c 'echo $ORACLE_HOME')
+    echo $ORACLE_HOME
+  register: oraclehome2
+  when: 
+    - ORACLE[1].oracle_user | default('') | trim != ''
+    - ORACLE[0].oracle_user|default(none) != ORACLE[1].oracle_user|default(none)
+
+- name: oracle home 변수 변경
+  set_fact:
+    ORACLE_HOME2: "{{ oraclehome2.stdout.split() | join('') }}"
+  when: 
+    - ORACLE[1].oracle_user | default('') | trim != ''
+    - ORACLE[0].oracle_user|default(none) != ORACLE[1].oracle_user|default(none)
+
+########## oracle 계정이 2개 이상일 경우 ####################
+  
+# step5. 1작업
+- name: DR 스냅샷 모드 원복 (Read Only 모드로 변경)
+  raw: su - "{{ ORACLE[0].oracle_user }}" -c "{{ read_only_sh }}"
+  register: result
+
+########## oracle 계정이 2개 이상일 경우 ####################
+
+# step5. 1작업
+- name: DR 스냅샷 모드 원복 (Read Only 모드로 변경)
+  raw: su - "{{ ORACLE[1].oracle_user }}" -c "{{ read_only_sh2 }}"
+  register: result2
+  when: ORACLE[1].oracle_user | default('') | trim != ''
+
+########## oracle 계정이 2개 이상일 경우 ####################
+
+- name: "DR 스냅샷 모드 원복 (Read Only 모드로 변경) 추출"
+  set_fact:
+   dr_recovery_results: "{{ dr_recovery_results|default([]) + [ '='*30 + 'Read Only 모드로 변경' + '='*30 + '\n' + result.stdout ] }}"
+  when: result.stdout|default(none) is defined
+
+# step. 250807 변경 Read Only 모드 변경 후 리스너 중지
+- name: 리스너 중지(LSNRCTL)
+  raw: | 
+    su - "{{ ORACLE[0].oracle_user }}" -c "cd {{ ORACLE_HOME }}/network/admin &&
+    lsnrctl stop"
+  register: lsnrctl_result
+
+########## oracle 계정이 2개 이상일 경우 ####################
+# 리스너 명칭 변수 추가 여부 확인 필요로 인해 주석 처리
+# - name: 리스너 중지(LSNRCTL)
+#   raw: | 
+#     su - "{{ ORACLE[1].oracle_user }}" -c "cd {{ ORACLE_HOME2 }}/network/admin &&
+#     lsnrctl stop"
+#   register: lsnrctl_result2
+#   when: ORACLE[1].oracle_user | default('') | trim != ''
+
+########## oracle 계정이 2개 이상일 경우 ####################
+
+# step5. 2작업
+- name: IP 삭제
+  raw: "/usr/sbin/ifconfig {{ item.eth }} {{ item.ip }} down"
+  loop: "{{ DR_DB_IP_RECOVERY_LIST }}"
+  register: result_DR_DB_IP_RECOVERY
+  when: item.eth != ""
+
+- name: IP 삭제 확인
+  raw: /usr/sbin/ifconfig -a
+  register: ifconfig_result
+  failed_when: ifconfig_result.rc not in [0,1]
+
+### IP 삭제시에 '요청한 주소를 배정할 수 없습니다.' 로그 출력 -> ifconfig로 확인 시, 삭제 되서 에러 대상에서 제외 시킴
+- name: "IP 추출 - 1"
+  set_fact:
+    result_dr_db_ip_recovery: "{{ result_dr_db_ip_recovery|default([]) + [ (item.rc==0)|ternary(item.stdout, item,stderr) ] }}"
+  loop: "{{ result_DR_DB_IP_RECOVERY.results }}"
+  loop_control:
+    label: "{{ item.item}}"
+  when: item.stdout is defined
+
+- name: "IP 추출 - 2"
+  set_fact:
+   dr_recovery_results: "{{ dr_recovery_results|default([]) + [ '='*30 + 'IP 삭제' + '='*30 + '\n' + result_dr_db_ip_recovery|join('\n') ] }}"
+
+# step5. 3작업    
+- name: "{{ LISTENER_ORA }} 파일 확인"
+  raw: "find {{ ORACLE_HOME }}/network/admin/{{ LISTENER_ORA }} 2>/dev/null | wc -l"
+  register: result_listener_ora_org
+
+########## oracle 계정이 2개 이상일 경우 ####################
+
+- name: "{{ LISTENER_ORA }} 파일 확인"
+  raw: "find {{ ORACLE_HOME2 }}/network/admin/{{ LISTENER_ORA }} 2>/dev/null | wc -l"
+  register: result_listener_ora_org2
+  when: 
+    - ORACLE[1].oracle_user | default('') | trim != ''
+    - ORACLE[0].oracle_user|default(none) != ORACLE[1].oracle_user|default(none)
+
+########## oracle 계정이 2개 이상일 경우 ####################
+
+- name: 리스너 종료 상태 명령어 로그 저장 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ SRVCTL_STATUS_FILE }}"
+    create: true
+    block: |
+      리스너 종료 상태(lsnrctl stop)
+      {{ lsnrctl_result.stdout }}
+    marker: "# {mark} lsnrctl stop 명령어 결과 백업"
+  register: blockinfile_result
+  delegate_to: localhost
+
+# step5. 4작업
+- name: "ORACLE 파일 변경 {{ LISTENER_ORA }} --> {{ LISTENER_ORA_DR }}"
+  raw: |
+    su - oracle -c "cd {{ ORACLE_HOME }}/network/admin &&
+    mv {{ LISTENER_ORA }} {{ LISTENER_ORA_DR }}"
+  when: result_listener_ora_org.stdout | int != 0
+
+########## oracle 계정이 2개 이상일 경우 ####################
+
+- name: "ORACLE 파일 변경 {{ LISTENER_ORA }} --> {{ LISTENER_ORA_DR }}"
+  raw: |
+    su - "{{ ORACLE[1].oracle_user }}" -c "cd {{ ORACLE_HOME2 }}/network/admin &&
+    mv {{ LISTENER_ORA }} {{ LISTENER_ORA_DR }}"
+  when: 
+    - ORACLE[1].oracle_user | default('') | trim != ''
+    - result_listener_ora_org2.stdout|default('1') | int != 0
+    - ORACLE[0].oracle_user|default(none) != ORACLE[1].oracle_user|default(none)
+
+########## oracle 계정이 2개 이상일 경우 ####################
+
+- name: 리스너 기동
+  raw: |
+    source ~/.bash_profile
+    srvctl start listener -l LISTENER
+  register: srvctl_status
+
+- name: crsctl status 확인
+  raw: |
+    source ~/.bash_profile
+    crsctl stat res -t | awk '
+      /^[a-z]/ {res=$0; next}
+      /^[[:space:]]+[A-Z]+/ {
+        if (res ~ /LISTENER/) {
+          print res " " $0
+        }
+      }'
+  register: listener_status_output
+  until: >
+    listener_status_output.stdout_lines[1].split()[1] == "ONLINE"
+    and
+    listener_status_output.stdout_lines[1].split()[2] == "ONLINE"
+  retries: 30
+  delay: 2
+  ignore_errors: true
+
+- name: srvctl status 확인
+  raw: |
+    source ~/.bash_profile
+    srvctl status listener -l LISTENER
+  register: srvctl_status
+
+- name: tns process check
+  raw: |
+    source ~/.bash_profile
+    ps -ef | grep -i tnslsnr | grep -v grep
+  register: tns_status
+  ignore_errors: true
+  failed_when: false
+
+- name: 리스너 기동 결과 비정상 
+  fail:
+    msg: |
+      리스너 비정상 실행 확인
+      crsctl status: {{ listener_status_output.stdout_lines[1] }}
+      srvctl ststus: {{ srvctl_status.stdout }}
+      tns status: {{ tns_status.stdout }}
+  when: >
+    listener_status_output.stdout_lines[1].split()[1] != "ONLINE" or
+    listener_status_output.stdout_lines[1].split()[2] != "ONLINE" or
+    (
+      'LISTENER 리스너가 실행 중이 아닙니다' in srvctl_status.stdout and
+      'not running' in srvctl_status.stdout
+    ) or
+    'tnslsnr' not in tns_status.stdout
+
+- name: lsnrctl start 명령어 로그 저장 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ SRVCTL_STATUS_FILE }}"
+    create: true
+    block: |
+      리스너 상태(crsctl status)
+      {{ listener_status_output.stdout }}
+      리스너 상태(svrctl status)
+      {{ srvctl_status.stdout }}
+      tns 프로세스 상태
+      {{ tns_status.stdout }}
+    marker: "# {mark} lsnrctl start 명령어 결과 백업"
+  delegate_to: localhost
+  ignore_errors: true
+
+- name: DB 복구 결과 백업 ---> localhost
+  blockinfile:
+    path: "{{ BACKUP_DIR }}/{{ DR_DB_RECOVERY_FILE }}"
+    create: true
+    block: |
+      {{ dr_recovery_results|join('\n') }}
+    marker: "# {mark} DB 복구 결과 백업"
+  register: blockinfile_result
+  delegate_to: localhost

@@ -1,0 +1,21 @@
+---
+active_command_list:
+  - name: redirfs_version
+    command: cat /sys/module/redirfs/version
+
+  - name: redhat_release
+    command: cat /etc/redhat-release
+
+  - name: host_ip
+    command: hostname -I
+    
+  - name: 패스워드 확인
+    command: cat /etc/passwd
+
+x_commands:
+  - "hostname"
+  - "reboot"
+  - "rm"
+  - "hostname"
+  - "reboot"
+  - "rm"

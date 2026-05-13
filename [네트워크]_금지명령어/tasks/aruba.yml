@@ -1,0 +1,63 @@
+- name: 초기 merged 리스트 생성
+  set_fact:
+    merged: []
+
+- name: 디버깅 - 명령어와 필터링 결과
+  debug:
+    msg: >-
+      명령어: {{ item.command }} ,
+      필터 결과: {{ x_commands | map(attribute='command') | select('in', item.command) | list }}
+  loop: "{{ command_list }}"
+
+# - name: aruba 장비에서 명령어 실행
+#   fap.common.exec_command:
+#     command: "{{ item.command }}"
+#   loop: "{{ command_list }}"
+#   when: x_commands | map(attribute='command') | select('in', item.command) | list | length == 0
+#   register: aruba_test
+
+# - name: aruba 장비에서 명령어 실행
+#   community.network.aruba_command:
+#     commands: "{{ item.command }}"
+#   loop: "{{ command_list }}"
+#   when: x_commands | map(attribute='command') | select('in', item.command) | list | length == 0
+#   register: aruba_test
+
+- name: "백업 명령어 실행"
+  cli_command:
+    command: "{{ item.command }}"
+    sendonly: false
+  ignore_errors: true
+  ignore_unreachable: false
+  register: cli_result
+  loop: "{{ backup_commands }}"
+  loop_control:
+    label: "{{ item.command }}"
+  when: x_commands | map(attribute='command') | select('in', item.command) | list | length == 0
+
+# - debug:
+#     var: aruba_test
+
+- name: 명령어 결과를 merged 리스트에 추가
+  set_fact:
+    merged: "{{ merged + [base_item | combine({
+      'command': item.item.command,
+      'result': ((item.stdout | join('\n')) if (item.stdout is defined and item.stdout is sequence and item.stdout is not string and item.stdout | length > 0) else (item.stdout if item.stdout is defined and item.stdout | length > 0 else 'N/A'))
+       })] }}"
+  loop: "{{ aruba_test.results }}"
+  vars:
+    base_item:
+      host: "{{ fap.host_ip }}"
+      host_name: "{{ fap.host_ip }}"
+      name: "{{ item.item.name }}"
+      report_type: "{{ report }}"
+      system: "{{ system }}"
+      cmd_id: "{{ item.item.id }}"
+      file_path: "{{ file_path }}"
+      is_pass: "1"
+      is_success: "none"
+  when: item.failed | default(false) | bool == false
+
+# - name: merged 결과 확인
+#   debug:
+#     var: merged

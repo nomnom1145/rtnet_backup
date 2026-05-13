@@ -1,0 +1,60 @@
+---
+- name: 초기 merged 리스트 생성
+  set_fact:
+    merged: []
+
+- name: "디버깅 - 명령어와 필터링 결과"
+  debug:
+    msg: "명령어: {{ item.command }} , 필터 결과: {{ x_commands | map(attribute='command') | select('in', item.command) | list }}"
+  loop: "{{ command_list }}"
+
+- name: Aruba 2930F 장비에서 명령어 실행
+  ansible.netcommon.cli_command:
+    command: "{{ item.command }}"
+  loop: "{{ command_list }}"
+  register: aruba_test
+  when: x_commands | map(attribute='command') | select('in', item.command) | list | length == 0
+
+- name: 명령어 성공 결과 merged에 저장
+  set_fact:
+    merged: "{{ merged + [base_item | combine({
+      'command': item.item.command,
+      'result': ((item.stdout | join('\n')) if (item.stdout is defined and item.stdout is sequence and item.stdout is not string and item.stdout | length > 0) else (item.stdout if item.stdout is defined and item.stdout | length > 0 else 'N/A')),
+      'is_success': 'success'
+      })] }}"
+  loop: "{{ aruba_test.results }}"
+  vars:
+    base_item:
+      host: "{{ fap.host_ip }}"
+      host_name: "{{ fap.host_ip }}"
+      name: "{{ item.item.name }}"
+      report_type: "{{ report }}"
+      system: "{{ system }}"
+      cmd_id: "{{ item.item.id }}"
+      file_path: "{{ file_path }}"
+      is_pass: "1"
+  when: item.failed | default(false) | bool == false
+
+- name: 명령어 실패 결과도 merged에 저장
+  set_fact:
+    merged: "{{ merged + [base_item | combine({
+      'command': item.item.command,
+      'result': 'Timeout or failed',
+      'is_success': 'fail'
+      })] }}"
+  loop: "{{ aruba_test.results }}"
+  vars:
+    base_item:
+      host: "{{ fap.host_ip }}"
+      host_name: "{{ fap.host_ip }}"
+      name: "{{ item.item.name }}"
+      report_type: "{{ report }}"
+      system: "{{ system }}"
+      cmd_id: "{{ item.item.id }}"
+      file_path: "{{ file_path }}"
+      is_pass: "0"
+  when: item.failed | default(false) | bool == true
+
+# - name: 결과 확인
+#   debug:
+#     var: merged
