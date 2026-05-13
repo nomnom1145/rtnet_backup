@@ -19,113 +19,116 @@ git config --global core.quotepath false
 export LANG=ko_KR.UTF-8
 export LC_ALL=ko_KR.UTF-8
 
+# pager 비활성화
+export GIT_PAGER=cat
+export PAGER=cat
+
 # 커밋 메시지 자동 생성
 COMMIT_MESSAGE="auto sync $(date '+%Y-%m-%d %H:%M:%S')"
 
-echo
-echo "===== Git 동기화 시작 ====="
+# 구분선 출력 함수
+print_section() {
+    echo
+    echo "=================================================="
+    echo "$1"
+    echo "=================================================="
+}
 
-echo "SOURCE_DIR: $SOURCE_DIR"
-echo "GIT_REPO_DIR: $GIT_REPO_DIR"
+print_section "Git 동기화 시작"
+
+echo "SOURCE_DIR   : $SOURCE_DIR"
+echo "GIT_REPO_DIR : $GIT_REPO_DIR"
+echo "GIT_BRANCH   : $GIT_BRANCH"
 
 # 기존 작업 디렉터리 존재 확인
 if [ ! -d "$SOURCE_DIR" ]; then
     echo
-    echo "오류: SOURCE_DIR 없음: $SOURCE_DIR"
+    echo "[실패] SOURCE_DIR 없음: $SOURCE_DIR"
     exit 1
 fi
 
 # Git 저장소 확인
 if [ ! -d "$GIT_REPO_DIR/.git" ]; then
     echo
-    echo "오류: Git 저장소 아님: $GIT_REPO_DIR"
+    echo "[실패] Git 저장소 아님: $GIT_REPO_DIR"
     exit 1
 fi
 
-# Git 저장소 이동
 cd "$GIT_REPO_DIR"
 
-# 최신 상태 가져오기
-echo
-echo "===== git pull ====="
+print_section "원격 저장소 최신화"
 
-git pull origin "$GIT_BRANCH"
+git pull --quiet origin "$GIT_BRANCH"
 
-# 삭제 예정 파일 확인
-echo
-echo "===== 삭제 예정 파일 확인 ====="
+echo "[완료] git pull 성공"
 
-DELETE_CHECK=$(rsync -av --delete --dry-run \
+print_section "삭제 예정 파일 확인"
+
+DELETE_CHECK=$(rsync -a --delete --dry-run --itemize-changes \
     --exclude ".git/" \
     --exclude "*.log" \
     --exclude "*.retry" \
     --exclude "__pycache__/" \
     --exclude ".env" \
     --exclude "venv/" \
-    "$SOURCE_DIR"/ "$GIT_REPO_DIR"/ | grep '^deleting ' || true)
+    --exclude ".vault_pass.txt" \
+    --exclude "vault_mail.yml" \
+    "$SOURCE_DIR"/ "$GIT_REPO_DIR"/ | grep '^\*deleting' || true)
 
 if [ -n "$DELETE_CHECK" ]; then
-    echo
-    echo "아래 파일은 SOURCE_DIR에 없기 때문에 삭제 예정입니다."
+    echo "[확인] 아래 파일은 SOURCE_DIR에 없기 때문에 삭제됩니다."
     echo
     echo "$DELETE_CHECK"
-    echo
-
-    read -r -p "삭제를 포함하여 계속 진행하시겠습니까? (yes/no): " CONFIRM_DELETE
-
-    if [ "$CONFIRM_DELETE" != "yes" ]; then
-        echo
-        echo "사용자가 작업을 취소했습니다."
-        exit 1
-    fi
 else
-    echo "삭제 예정 파일 없음"
+    echo "[확인] 삭제 예정 파일 없음"
 fi
 
-# 파일 동기화
-echo
-echo "===== rsync 동기화 ====="
+print_section "파일 동기화"
 
-rsync -av --delete \
+RSYNC_RESULT=$(rsync -a --delete --itemize-changes \
     --exclude ".git/" \
     --exclude "*.log" \
     --exclude "*.retry" \
     --exclude "__pycache__/" \
     --exclude ".env" \
     --exclude "venv/" \
-    "$SOURCE_DIR"/ "$GIT_REPO_DIR"/
+    --exclude ".vault_pass.txt" \
+    --exclude "vault_mail.yml" \
+    "$SOURCE_DIR"/ "$GIT_REPO_DIR"/)
 
-# Git 상태 확인
-echo
-echo "===== git status ====="
+if [ -n "$RSYNC_RESULT" ]; then
+    echo "[변경 파일]"
+    echo "$RSYNC_RESULT"
+else
+    echo "[확인] rsync 변경 파일 없음"
+fi
 
-git status
+print_section "Git 변경사항 확인"
 
-# 변경사항 없는 경우 종료
-if [ -z "$(git status --porcelain)" ]; then
-    echo
-    echo "변경사항 없음"
+GIT_STATUS=$(git status --short)
+
+if [ -z "$GIT_STATUS" ]; then
+    echo "[완료] 변경사항 없음"
     exit 0
 fi
 
-# Git add
-echo
-echo "===== git add ====="
+echo "[변경사항]"
+echo "$GIT_STATUS"
+
+print_section "Git 커밋 준비"
 
 git add .
 
-# Git commit
-echo
-echo "===== git commit ====="
+echo "[커밋 대상 요약]"
+git --no-pager diff --cached --stat
+
+print_section "Git 커밋"
 
 git commit -m "$COMMIT_MESSAGE"
 
-# Git push
-echo
-echo "===== git push ====="
+print_section "Git Push"
 
-git push origin "$GIT_BRANCH"
+git push --quiet origin "$GIT_BRANCH"
 
-echo
-echo "===== GitHub 동기화 완료 ====="
-echo
+echo "[완료] GitHub 동기화 완료"
+echo "커밋 메시지: $COMMIT_MESSAGE"
