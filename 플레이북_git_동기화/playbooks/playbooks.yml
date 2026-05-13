@@ -5,20 +5,12 @@
   ignore_errors: true
   tasks:
     - name: 스크립트 파일 실행(git 동기화)
-      raw: sh /home/fap/sh_test/code_git_push.sh
+      # raw: sh /home/fap/sh_test/code_git_push.sh
+      raw: sh /fap/ansible/projects/플레이북_git_동기화/templates/code_git_push.sh
       register: sh_test
+
+    - name: 
 
     - name: 디버그
       debug:
         var: sh_test
-
-    # - name: con_check
-    #   raw: hostname -I
-    #   register: con_check_test
-
-    # - name: 접속 체크
-    #   debug:
-    #     var: con_check_test
-
-
-    # 테스트 합니다
