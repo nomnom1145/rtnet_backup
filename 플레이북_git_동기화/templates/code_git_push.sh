@@ -1,4 +1,3 @@
-```bash
 #!/bin/bash
 
 # 작업 실패 시 즉시 종료
@@ -130,4 +129,3 @@ git push origin "$GIT_BRANCH"
 echo
 echo "===== GitHub 동기화 완료 ====="
 echo
-```
