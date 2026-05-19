@@ -5,8 +5,8 @@
   ignore_unreachable: false
   gather_facts: false
   vars: # 보고서에 들어갈 내용 변수값 (변수명의 경우 대문자)
-    FIRST_IP: "172.20.1.173" # 작업 결과 윗줄에 들어갈 대상 IP
-    SECOND_IP: "172.20.1.174" # 작업 결과 아랫줄에 들어갈 대상 IP
+    FIRST_IP: "192.168.1.202" # 작업 결과 윗줄에 들어갈 대상 IP
+    SECOND_IP: "172.20.1.173" # 작업 결과 아랫줄에 들어갈 대상 IP
     FIRST_NAME: "장상기" # 알티넷 담당자명
     SECOND_NAME: "장현우" # 신세계 아이앤씨 담당자명
     SPECIAL_NOTE: "특이사항 없음" # 특이사항 입력 부분 작성 내용
@@ -28,3 +28,10 @@
 
     - name: 보고서 생성
       include_tasks: "../tasks/make_report.yml"
+
+    - name: 플레이북 백업
+      raw: |
+        cd /fap/ansible
+        sh exec_backup_projects.sh
+      register: projects_backup
+      delegate_to: localhost

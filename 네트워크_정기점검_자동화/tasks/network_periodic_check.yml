@@ -158,7 +158,7 @@
 ################################################################################################
 
 - name: 3. 인벤토리 현황 트리구조 출력 확인 (현재 등록된 호스트 수)
-  raw: "printf 'select count(*) from host_info where is_deleted = 0 and is_enable = 1;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  raw: "printf 'select count(*) from host_info where is_deleted = 0 and is_enable = 1 and business_type_id in (10, 11);' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
   register: web_ui_result
   ignore_errors: false
 
@@ -172,7 +172,7 @@
 ################################################################################################
 
 - name: 5. 조직/팀/사용자 관리 메뉴 확인 (현재 등록된 사용자 수)
-  raw: "printf 'select count(*) from user_info;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  raw: "printf 'select count(*) from user_info where is_enable = 1 and is_deleted = 0;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
   register: user_count_result
   ignore_errors: false
 
@@ -214,7 +214,7 @@
 ################################################################################################
 
 - name: 8. 작업 템플릿 메뉴 확인 (현재 등록된 작업 템플릿 수)
-  raw: "printf 'select count(*) from template_info where is_enable = 1;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  raw: "printf 'select count(*) from template_info where is_enable = 1 and is_deleted = 0 and template_type = $$J$$ and not (execute_permission = $$T$$ and task_count is null);' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
   register: template_count_result
   ignore_errors: false  
 

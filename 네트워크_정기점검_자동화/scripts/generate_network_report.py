@@ -244,6 +244,56 @@ def normalize_process_status(status_text):
     return status_text.split()[0]
 
 
+def filter_login_lines(lines, base_row_count):
+    lines = clean_lines(lines)
+    if len(lines) <= base_row_count:
+        return lines
+
+    root_lines = [line for line in lines if "root" in line.lower()]
+    if root_lines:
+        return root_lines
+    return lines
+
+
+def expand_merged_text_block(ws, cell_ref, next_row, text, horizontal="left"):
+    merged_range = find_merged_range(ws, cell_ref)
+    if not merged_range:
+        if horizontal == "left":
+            set_left_result_cell(ws, cell_ref, text)
+        else:
+            set_result_cell(ws, cell_ref, text)
+        return
+
+    start_row = merged_range.min_row
+    end_row = merged_range.max_row
+    start_col = merged_range.min_col
+    end_col = merged_range.max_col
+    row_count = (end_row - start_row) + 1
+    lines = clean_lines(text)
+    line_count = max(1, len(lines))
+    extra_rows = max(0, line_count - row_count)
+
+    if extra_rows > 0:
+        ws.insert_rows(next_row, amount=extra_rows)
+        default_height = ws.row_dimensions[start_row].height or ws.sheet_format.defaultRowHeight or 15
+        for row_idx in range(next_row, next_row + extra_rows):
+            ws.row_dimensions[row_idx].height = default_height
+
+    merged_ref = str(merged_range)
+    ws.unmerge_cells(merged_ref)
+    ws.merge_cells(
+        start_row=start_row,
+        start_column=start_col,
+        end_row=end_row + extra_rows,
+        end_column=end_col,
+    )
+
+    if horizontal == "left":
+        set_left_result_cell(ws, cell_ref, "\n".join(lines) if lines else MISSING_TEXT)
+    else:
+        set_result_cell(ws, cell_ref, "\n".join(lines) if lines else MISSING_TEXT)
+
+
 def parse_process(lines):
     result = {}
     for line in lines:
@@ -303,11 +353,21 @@ def write_host_section(ws, host_data, section):
     set_result_cell(ws, section["interface_dns"], interface["dns"])
     set_result_cell(ws, section["interface_if"], interface["if"])
 
-    login_lines = clean_lines(host_data.get("login_output"))
-    set_left_result_cell(ws, section["login"], "\n".join(login_lines) if login_lines else MISSING_TEXT)
-
     process_map = parse_process(clean_lines(host_data.get("process_output")))
     write_process_row(ws, section["process_cells"], process_map)
+
+
+def write_login_section(ws, host_data, section):
+    base_row_count = 8
+    login_lines = filter_login_lines(host_data.get("login_output"), base_row_count)
+    text = "\n".join(login_lines) if login_lines else MISSING_TEXT
+    expand_merged_text_block(
+        ws,
+        section["login"],
+        section["login_next_row"],
+        text,
+        horizontal="left",
+    )
 
 
 def main():
@@ -341,6 +401,7 @@ def main():
         "interface_dns": "B113",
         "interface_if": "B114",
         "login": "A127",
+        "login_next_row": 135,
         "process_cells": {
             "fap-agent": "B153",
             "fap-manager-0": "C153",
@@ -363,6 +424,7 @@ def main():
         "interface_dns": "B118",
         "interface_if": "B119",
         "login": "A136",
+        "login_next_row": 144,
         "process_cells": {
             "fap-agent": "B156",
             "fap-manager-0": "C156",
@@ -384,6 +446,8 @@ def main():
 
     sftp_lines = clean_lines(data.get("sftp_output"))
     set_result_cell(ws, "F179", "\n".join(sftp_lines) if sftp_lines else MISSING_TEXT)
+    write_login_section(ws, data.get("second_host", {}), lower_section)
+    write_login_section(ws, data.get("first_host", {}), upper_section)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_path)

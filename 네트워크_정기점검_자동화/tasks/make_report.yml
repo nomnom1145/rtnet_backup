@@ -3,14 +3,49 @@
   set_fact:
     network_report_filename: "{{ lookup('pipe', 'TZ=Asia/Seoul date +%Y년_%m월_정기점검.xlsx') }}"
   run_once: true
-  delegate_to: localhost
 
 - name: Prepare report host order
   set_fact:
-    first_host_key: "{{ first_ip | default(ansible_play_hosts_all[0] | default(''), true) }}"
-    second_host_key: "{{ second_ip | default(ansible_play_hosts_all[1] | default(''), true) }}"
+    matched_report_hosts: >-
+      {{
+        ansible_play_hosts_all
+        | map('extract', hostvars)
+        | selectattr('fap', 'defined')
+        | list
+      }}
+    first_host_key: ""
+    second_host_key: ""
   run_once: true
-  delegate_to: localhost
+
+- name: Resolve first report host
+  set_fact:
+    first_host_key: "{{ item }}"
+  loop: "{{ ansible_play_hosts_all }}"
+  when: >-
+    (
+      (hostvars[item].fap.host_ip | default(item)) == first_ip
+    ) or (
+      item == first_ip
+    )
+  run_once: true
+
+- name: Resolve second report host
+  set_fact:
+    second_host_key: "{{ item }}"
+  loop: "{{ ansible_play_hosts_all }}"
+  when: >-
+    (
+      (hostvars[item].fap.host_ip | default(item)) == second_ip
+    ) or (
+      item == second_ip
+    )
+  run_once: true
+
+- name: Apply fallback report host order
+  set_fact:
+    first_host_key: "{{ first_host_key | default(ansible_play_hosts_all[0] | default(''), true) }}"
+    second_host_key: "{{ second_host_key | default(ansible_play_hosts_all[1] | default(''), true) }}"
+  run_once: true
 
 - name: Prepare report paths
   set_fact:
@@ -18,7 +53,6 @@
     network_report_json_path: "/tmp/network_report_{{ fap.job_id | default('manual') }}.json"
     network_report_output_path: "{{ file_path }}/{{ network_report_filename }}"
   run_once: true
-  delegate_to: localhost
 
 - name: Build report input data
   set_fact:
@@ -30,32 +64,28 @@
       second_name: "{{ second_name | default('') }}"
       special_note: "{{ special_note | default('') }}"
       first_host:
-        cpu_output: "{{ first_ref.get('cpu_usage', {}).get('stdout', '') | trim }}"
-        disk_output: "{{ first_ref.get('disk_result', {}).get('stdout_lines', []) }}"
-        memory_output: "{{ first_ref.get('mem_result', {}).get('stdout', '') | trim }}"
-        routing_output: "{{ first_ref.get('routing_result', {}).get('stdout_lines', []) }}"
-        interface_output: "{{ first_ref.get('interface_result', {}).get('stdout_lines', []) }}"
-        login_output: "{{ first_ref.get('login_result', {}).get('stdout_lines', []) }}"
-        process_output: "{{ first_ref.get('process_result', {}).get('stdout_lines', []) }}"
+        cpu_output: "{{ (hostvars[first_host_key].cpu_usage.stdout | default('', true) | trim) if first_host_key in hostvars else '' }}"
+        disk_output: "{{ (hostvars[first_host_key].disk_result.stdout_lines | default([], true)) if first_host_key in hostvars else [] }}"
+        memory_output: "{{ (hostvars[first_host_key].mem_result.stdout | default('', true) | trim) if first_host_key in hostvars else '' }}"
+        routing_output: "{{ (hostvars[first_host_key].routing_result.stdout_lines | default([], true)) if first_host_key in hostvars else [] }}"
+        interface_output: "{{ (hostvars[first_host_key].interface_result.stdout_lines | default([], true)) if first_host_key in hostvars else [] }}"
+        login_output: "{{ (hostvars[first_host_key].login_result.stdout_lines | default([], true)) if first_host_key in hostvars else [] }}"
+        process_output: "{{ (hostvars[first_host_key].process_result.stdout_lines | default([], true)) if first_host_key in hostvars else [] }}"
       second_host:
-        cpu_output: "{{ second_ref.get('cpu_usage', {}).get('stdout', '') | trim }}"
-        disk_output: "{{ second_ref.get('disk_result', {}).get('stdout_lines', []) }}"
-        memory_output: "{{ second_ref.get('mem_result', {}).get('stdout', '') | trim }}"
-        routing_output: "{{ second_ref.get('routing_result', {}).get('stdout_lines', []) }}"
-        interface_output: "{{ second_ref.get('interface_result', {}).get('stdout_lines', []) }}"
-        login_output: "{{ second_ref.get('login_result', {}).get('stdout_lines', []) }}"
-        process_output: "{{ second_ref.get('process_result', {}).get('stdout_lines', []) }}"
-      host_count: "{{ first_ref.get('web_ui_result', {}).get('stdout', '') | trim }}"
-      user_count: "{{ first_ref.get('user_count_result', {}).get('stdout', '') | trim }}"
-      schedule_count: "{{ first_ref.get('schedule_count_result', {}).get('stdout', '') | trim }}"
-      notification_count: "{{ first_ref.get('notification_count_result', {}).get('stdout', '') | trim }}"
-      template_count: "{{ first_ref.get('template_count_result', {}).get('stdout', '') | trim }}"
-      sftp_output: "{{ first_ref.get('sftp_file_result', {}).get('stdout_lines', []) }}"
-  vars:
-    first_ref: "{{ hostvars[first_host_key] if first_host_key in hostvars else {} }}"
-    second_ref: "{{ hostvars[second_host_key] if second_host_key in hostvars else {} }}"
+        cpu_output: "{{ (hostvars[second_host_key].cpu_usage.stdout | default('', true) | trim) if second_host_key in hostvars else '' }}"
+        disk_output: "{{ (hostvars[second_host_key].disk_result.stdout_lines | default([], true)) if second_host_key in hostvars else [] }}"
+        memory_output: "{{ (hostvars[second_host_key].mem_result.stdout | default('', true) | trim) if second_host_key in hostvars else '' }}"
+        routing_output: "{{ (hostvars[second_host_key].routing_result.stdout_lines | default([], true)) if second_host_key in hostvars else [] }}"
+        interface_output: "{{ (hostvars[second_host_key].interface_result.stdout_lines | default([], true)) if second_host_key in hostvars else [] }}"
+        login_output: "{{ (hostvars[second_host_key].login_result.stdout_lines | default([], true)) if second_host_key in hostvars else [] }}"
+        process_output: "{{ (hostvars[second_host_key].process_result.stdout_lines | default([], true)) if second_host_key in hostvars else [] }}"
+      host_count: "{{ (hostvars[first_host_key].web_ui_result.stdout | default('', true) | trim) if first_host_key in hostvars else '' }}"
+      user_count: "{{ (hostvars[first_host_key].user_count_result.stdout | default('', true) | trim) if first_host_key in hostvars else '' }}"
+      schedule_count: "{{ (hostvars[first_host_key].schedule_count_result.stdout | default('', true) | trim) if first_host_key in hostvars else '' }}"
+      notification_count: "{{ (hostvars[first_host_key].notification_count_result.stdout | default('', true) | trim) if first_host_key in hostvars else '' }}"
+      template_count: "{{ (hostvars[first_host_key].template_count_result.stdout | default('', true) | trim) if first_host_key in hostvars else '' }}"
+      sftp_output: "{{ (hostvars[first_host_key].sftp_file_result.stdout_lines | default([], true)) if first_host_key in hostvars else [] }}"
   run_once: true
-  delegate_to: localhost
 
 - name: Ensure report output directory exists
   file:
