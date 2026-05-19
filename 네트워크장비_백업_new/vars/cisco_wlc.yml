@@ -1,0 +1,10 @@
+---
+backup_commands:
+- { id: '0001', name: '1_show running-config', command: 'show running-config', os: 'cisco_wlc', is_compare: false, is_save: true }  
+- { id: '0002', name: '2_show sysinfo', command: 'show sysinfo', os: 'cisco_wlc', is_compare: false, is_save: true }
+- { id: '0003', name: '3_show license capacity', command: 'show license capacity', os: 'cisco_wlc', is_compare: false, is_save: true }
+- { id: '0004', name: '4_show interface summary', command: 'show interface summary', os: 'cisco_wlc', is_compare: false, is_save: true }
+- { id: '0005', name: '5_show wlan summary', command: 'show wlan summary', os: 'cisco_wlc', is_compare: false, is_save: true }
+- { id: '0006', name: '6_show wlan apgroups', command: 'show wlan apgroups', os: 'cisco_wlc', is_compare: false, is_save: true }
+- { id: '0007', name: '6_show ap summary', command: 'show ap summary', os: 'cisco_wlc', is_compare: false, is_save: true }
+- { id: '0008', name: '8_show ap cdp neighbors all', command: 'show ap cdp neighbors all', os: 'cisco_wlc', is_compare: false, is_save: true }

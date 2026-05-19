@@ -1,0 +1,11 @@
+---
+backup_commands:
+- {command: 'no paging', is_save: false}
+- { id: '0001', name: '1_show version', command: 'show version', os: 'aruba_wlc', is_compare: false, is_save: true }
+- { id: '0002', name: '2_show license', command: 'show license', os: 'aruba_wlc', is_compare: false, is_save: true }
+- { id: '0003', name: '3_show interface', command: 'show interface', os: 'aruba_wlc', is_compare: false, is_save: true }
+- { id: '0004', name: '4_show wlan ssid-profile', command: 'show wlan ssid-profile', os: 'aruba_wlc', is_compare: false, is_save: true }
+- { id: '0005', name: '5_show ap-group', command: 'show ap-group', os: 'aruba_wlc', is_compare: false, is_save: true }
+- { id: '0006', name: '6_show ap active', command: 'show ap active', os: 'aruba_wlc', is_compare: false, is_save: true }
+- { id: '0007', name: '7_show ap lldp neighbors', command: 'show ap lldp neighbors', os: 'aruba_wlc', is_compare: false, is_save: true }
+- { id: '0008', name: '8_show running-config', command: 'show running-config', os: 'aruba_wlc', is_compare: false, is_save: true }

@@ -1,0 +1,21 @@
+---
+vsh_commands:
+# - { id: '0001', name: 'vsh', command: 'vsh', os: 'apic_os', is_compare: false, is_save: true }
+# - { id: '0002', name: 'sleep', command: 'sleep 10', os: 'apic_os', is_compare: false, is_save: true }
+
+backup_commands:
+- { id: '0001', name: '1_vsh', command: 'vsh', os: 'apic_os', is_compare: false, is_save: true }
+- { id: '0002', name: '2_sleep', command: 'sleep 10', os: 'apic_os', is_compare: false, is_save: true }
+- { id: '0003', name: '3_terminal length 0', command: 'terminal length 0', os: 'apic_os', is_compare: false, is_save: true }
+- { id: '0004', name: '4_show interface status | exc Vlan | exc Tunnel | exc Lo', command: 'show interface status | exc Vlan | exc Tunnel | exc Lo', os: 'apic_os', is_compare: false, is_save: true }
+- { id: '0005', name: '5_show interface status', command: 'show interface status', os: 'apic_os', is_compare: false, is_save: true }
+- { id: '0006', name: '6_show lldp neighbors', command: 'show lldp neighbors', os: 'apic_os', is_compare: false, is_save: true }
+- { id: '0007', name: '7_show cdp neighbors', command: 'show cdp neighbors', os: 'apic_os', is_compare: false, is_save: true }
+- { id: '0008', name: '8_show ip route vrf all summary', command: 'show ip route vrf all summary', os: 'apic_os', is_compare: false, is_save: true }
+
+# backup_commands:
+# - { id: '0001', name: '1_terminal length 0', command: 'terminal length 0', os: 'apic_os', is_compare: false, is_save: true }
+# - { id: '0002', name: '2_show version', command: 'show version', os: 'apic_os', is_compare: false, is_save: true }
+# - { id: '0003', name: '3_show ip interface brief', command: 'show ip interface brief', os: 'apic_os', is_compare: false, is_save: true }
+# - { id: '0004', name: '4_show switch', command: 'show switch', os: 'apic_os', is_compare: false, is_save: true }
+# - { id: '0005', name: '5_show controller detail', command: 'show controller detail', os: 'apic_os', is_compare: false, is_save: true }

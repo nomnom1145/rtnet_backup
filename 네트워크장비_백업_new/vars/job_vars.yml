@@ -1,0 +1,39 @@
+---
+backup_items:
+  cisco_ios:
+  - {"command": "terminal length 0"} # 출력제한 해제
+  - {"name": "설정", "command": "show running-config", "is_save": true}
+  - {"name": "버전", "command": "show version", "is_save": true}
+  - {"name": "인터페이스", "command": "show interfaces status", "is_save": true}
+  huawei_vrp:
+  - {"command": "screen-length 0 temp"} # 출력제한 해제
+  - {"name": "설정", "command": "display current-configuration", "is_save": true}
+  - {"name": "버전", "command": "display version", "is_save": true}
+  - {"name": "인터페이스", "command": "display interface brief", "is_save": true}
+  rocky:
+  - {"name": "계정", "command": "cat /etc/passwd", "is_save": true}
+  - {"name": "버전", "command": "cat /etc/*release*", "is_save": true}
+  - {"name": "경로", "command": "ip route", "is_save": true}
+
+compare_items:
+  cisco_ios:
+  - {"command": "terminal length 0"} # 출력제한 해제
+  - {"name": "재기동작업백업_설정", "command": "show running-config", "is_save": true, "is_compare": true, os: ansible_network_os2}
+  - {"name": "재기동작업백업_버전", "command": "show version", "is_save": true, "is_compare": true, os: ansible_network_os2}
+  - {"name": "재기동작업백업_인터페이스", "command": "show interfaces status", "is_save": true, "is_compare": true, os: ansible_network_os2}
+  huawei_vrp:
+  - {"command": "screen-length 0 temp"} # 출력제한 해제
+  - {"name": "재기동작업백업_설정", "command": "display current-configuration", "is_save": true, "is_compare": true, os: ansible_network_os2}
+  - {"name": "재기동작업백업_버전", "command": "display version", "is_save": true, "is_compare": true, os: ansible_network_os2}
+  - {"name": "재기동작업백업_인터페이스", "command": "display interface brief", "is_save": true, "is_compare": true, os: ansible_network_os2}
+  rocky:
+  - {"name": "재기동작업백업_계정", "command": "cat /etc/passwd", "is_save": true, "is_compare": true, os: ansible_network_os2}
+  - {"name": "재기동작업백업_버전", "command": "cat /etc/*release*", "is_save": true, "is_compare": true, os: ansible_network_os2}
+  - {"name": "재기동작업백업_라우트", "command": "ip route", "is_save": true, "is_compare": true, os: ansible_network_os2}
+
+fail_backup_result:
+  result:
+    data_list:
+    - host_name: "{{ inventory_hostname }}"
+      is_success: False
+      os: "{{ ansible_network_os2 }}"

@@ -1,0 +1,14 @@
+backup_commands:
+#- { id: '0001', name: '1_show full-configuration', command: 'show full-configuration', os: 'forti_os', is_compare: false, is_save: true }
+#- { id: '0002', name: '2_get sys status', command: 'get sys status', os: 'forti_os', is_compare: falseis_save: true, is_save: true }
+#- { id: '0003', name: '3_get sys per status', command: 'get sys per status', os: 'forti_os', is_compare: false, is_save: true }
+#- { id: '0004', name: '4_get vpn ipsec stats tunnel', command: 'get vpn ipsec stats tunnel', os: 'forti_os', is_compare: false, is_save: true }
+#- { id: '0005', name: '5_get sys interface physical', command: 'get sys interface physical', os: 'forti_os', is_compare: false, is_save: true }
+#- { id: '0006', name: '6_get sys arp', command: 'get sys arp', os: 'forti_os', is_compare: false, is_save: true }
+#- { id: '0007', name: '7_get router info routing-table all', command: 'get router info routing-table all', os: 'forti_os', is_compare: false, is_save: true }
+#- { id: '0008', name: '8_diag sys top', command: 'diag sys top', os: 'forti_os', is_compare: false, is_save: true }
+#- { id: '0008', name: '8_diag sys session stat', command: 'diag sys session stat', os: 'forti_os', is_compare: false, is_save: true }
+#- { id: '0010', name: '10_exit', command: 'exit', os: 'forti_os', is_compare: false, is_save: true }
+- { id: '0011', name: '11_config vdom', command: 'config vdom', os: 'forti_os', is_compare: false, is_save: true }
+- { id: '0012', name: '12_edit root', command: 'edit root', os: 'forti_os', is_compare: false, is_save: true }
+- { id: '0013', name: '13_show', command: 'show', os: 'forti_os', is_compare: false, is_save: true }

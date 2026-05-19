@@ -1,0 +1,51 @@
+---
+- name: backup network device
+  hosts: all
+  gather_facts: false
+  strategy: free  
+  serial: 150
+  vars:
+    fail_backup_result:
+      result:
+        data_list:
+        - host_name: "{{ inventory_hostname }}"
+          is_success: False
+          os: "{{ ansible_network_os2 }}"
+  module_defaults:
+    fap.common.exec_command:
+      fap_vars: "{{ fap }}"
+      protocol: auto
+      ip: "{{ inventory_hostname }}"  
+      result_type: cli_data
+      user_id: "{{ ansible_user | default('') }}"
+      user_password: "{{ ansible_password | default('') }}"
+      become_method: "{{ ansible_become_method | default('') }}"
+      become_password: "{{ ansible_become_password | default('') }}"
+      network_os: "{{ ansible_network_os2 }}"
+  vars_files:
+  - "/fap/ansible/projects/네트워크장비_백업_new/vars/{{ ansible_network_os2 }}.yml"
+  tasks: 
+  - block:
+    - name: connection check and backup execute 
+      fap.common.exec_command:      
+        command: "{{ backup_commands }}"        
+      delegate_to: localhost
+      register: backup_result
+
+    always:
+      - name: set fail result
+        set_fact:
+          backup_result: "{{ fail_backup_result }}"
+        when: backup_result.failed or backup_result is not defined
+
+      - throttle: 10
+        fap.common.save_data:
+          # fap_vars: "{{ fap }}"
+          hostname: "{{ inventory_hostname }}"
+          table_name: ansible_cli_data
+          data_type: backup
+          data_key: network
+          content: "{{ backup_result['result'] }}"
+          template_id: "{{ fap.template_id | default(omit) }}"
+          job_id: "{{ fap.job_id | default(omit) }}"
+        delegate_to: localhost

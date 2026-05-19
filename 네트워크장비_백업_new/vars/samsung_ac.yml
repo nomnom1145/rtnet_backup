@@ -1,0 +1,9 @@
+---
+backup_commands:
+- { id: '0001', name: '1_show version', command: 'show version', os: 'samsung_ac', is_compare: false, is_save }
+- { id: '0002', name: '2_show system license-key', command: 'show system license-key', os: 'samsung_ac', is_compare: false, is_save }
+- { id: '0003', name: '3_show interface switchport bridge 1', command: 'show interface switchport bridge 1', os: 'samsung_ac', is_compare: false, is_save }
+- { id: '0004', name: '4_show wlan summary', command: 'show wlan summary', os: 'samsung_ac', is_compare: false, is_save }
+- { id: '0005', name: '5_show ap-group summary', command: 'show ap-group summary', os: 'samsung_ac', is_compare: false, is_save }
+- { id: '0006', name: '6_show ap summary', command: 'show ap summary', os: 'samsung_ac', is_compare: false, is_save }
+- { id: '0007', name: '7_show running-config', command: 'show running-config', os: 'samsung_ac', is_compare: false, is_save }

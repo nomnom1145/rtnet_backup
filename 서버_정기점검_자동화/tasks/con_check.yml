@@ -1,0 +1,3 @@
+---
+- name: con_check
+  hosts: all

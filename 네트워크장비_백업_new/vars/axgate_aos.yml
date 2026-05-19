@@ -1,0 +1,6 @@
+---
+backup_commands:     
+- { id: '0001', name: '1_show run', command: 'show run', os: 'aos', is_compare: false, is_save: true } #is_compare
+- { id: '0002', name: '2_show logging', command: 'show logging', os: 'aos', is_compare: false, is_save: true }
+- { id: '0003', name: '3_show version', command: 'show version', os: 'aos', is_compare: false, is_save: true }
+- { id: '0004', name: '4_show ip int brief', command: 'show ip int brief', os: 'aos', is_compare: false, is_save: true }

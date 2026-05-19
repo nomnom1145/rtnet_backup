@@ -1,0 +1,18 @@
+---
+backup_commands:    
+- { id: '0001', name: '1_lines 300', command: 'lines 300', os: 'alteon_alteon', is_compare: false, is_save: true}
+- { id: '0002', name: '2_//cfg/dump', command: '//cfg/dump', os: 'alteon_alteon', is_compare: false, is_save: true} #compare
+- { id: '0003', name: '3_//info/sys/general', command: '//info/sys/general', os: 'alteon_alteon', is_compare: false, is_save: true} #compare
+- { id: '0004', name: '4_//info/swkey', command: '//info/swkey', os: 'alteon_alteon', is_compare: false, is_save: true}
+- { id: '0005', name: '5_//info/sys/fan/temp/ps', command: '//info/sys/fan/temp/ps', os: 'alteon_alteon', is_compare: false, is_save: true}
+- { id: '0006', name: '6_//info/link', command: '//info/link', os: 'alteon_alteon', is_compare: false, is_save: true} #compare
+- { id: '0007', name: '7_//info/l2/vlan', command: '//info/l2/vlan', os: 'alteon_alteon', is_compare: false, is_save: true}
+- { id: '0008', name: '8_//info/l3/ip', command: '//info/l3/ip', os: 'alteon_alteon', is_compare: false, is_save: true} #compare
+- { id: '0009', name: '9_//info/l3/vrrp', command: '//info/l3/vrrp', os: 'alteon_alteon', is_compare: false, is_save: true} #compare
+- { id: '0010', name: '10_//info/slb/dump', command: '//info/slb/dump', os: 'alteon_alteon', is_compare: false, is_save: true} #compare
+- { id: '0011', name: '11_//info/sys/log 100', command: '//info/sys/log 100', os: 'alteon_alteon', is_compare: false, is_save: true}
+- { id: '0012', name: '12_//stats/mp/cpu', command: '//stats/mp/cpu', os: 'alteon_alteon', is_compare: false, is_save: true}
+- { id: '0013', name: '13_//stats/mp/mem', command: '//stats/mp/mem', os: 'alteon_alteon', is_compare: false, is_save: true}
+- { id: '0014', name: '14_lines 24', command: 'lines 24', os: 'alteon_alteon', is_compare: false, is_save: true}
+- { id: '0015', name: '15_/', command: '/', os: 'alteon_alteon', is_compare: false, is_save: true}
+- { id: '0016', name: '16_exit', command: 'exit', os: 'alteon_alteon', is_compare: false, is_save: true}    

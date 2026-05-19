@@ -1,0 +1,3 @@
+---
+- name: server_periodic_check
+  hosts: all

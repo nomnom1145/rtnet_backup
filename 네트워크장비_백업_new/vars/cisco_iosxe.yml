@@ -1,0 +1,44 @@
+---
+backup_commands:
+- { id: '0001', name: '1_terminal length 0', command: 'terminal length 0', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0002', name: '2_show running-config', command: 'show running-config', os: 'cisco_iosxe', is_compare: true,is_save: true } #compare
+- { id: '0003', name: '3_show module', command: 'show module', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0004', name: '4_show redundancy states', command: 'show redundancy states', os: 'cisco_iosxe', is_compare: false,is_save: true }
+#- { id: '0005', name: '5_show processes cpu', command: 'show processes cpu', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0006', name: '6_show processes cpu history', command: 'show processes cpu history', os: 'cisco_iosxe', is_compare: false,is_save: true }
+#- { id: '0007', name: '7_show processes memory', command: 'show processes memory', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0008', name: '8_show ip interface brief', command: 'show ip interface brief', os: 'cisco_iosxe', is_compare: true,is_save: true } #compare
+- { id: '0009', name: '9_show int status', command: 'show int status', os: 'cisco_iosxe', is_compare: true,is_save: true } #compare
+- { id: '0010', name: '10_show interface description', command: 'show interface description', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0011', name: '11_show interface trunk', command: 'show interface trunk', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0012', name: '12_show etherchannel summary', command: 'show etherchannel summary', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0013', name: '13_show vlan', command: 'show vlan', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0014', name: '14_show spanning-tree', command: 'show spanning-tree', os: 'cisco_iosxe', is_compare: true,is_save: true } #compare
+- { id: '0015', name: '15_show spanning-tree summary', command: 'show spanning-tree summary', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0016', name: '16_show spanning-tree root', command: 'show spanning-tree root', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0017', name: '17_show spanning-tree blockedports', command: 'show spanning-tree blockedports', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0018', name: '18_show standby brief', command: 'show standby brief', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0019', name: '19_show ip arp', command: 'show ip arp', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0020', name: '20_show mac address-table', command: 'show mac address-table', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0021', name: '21_show dmvpn', command: 'show dmvpn', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0022', name: '22_show crypto isakmp sa', command: 'show crypto isakmp sa', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0023', name: '23_show crypto ipsec sa', command: 'show crypto ipsec sa', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0024', name: '24_show cdp neighbor', command: 'show cdp neighbor', os: 'cisco_iosxe', is_compare: true,is_save: true } #compare
+- { id: '0025', name: '25_show cdp neighbors detail', command: 'show cdp neighbors detail', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0026', name: '26_show monitor session all', command: 'show monitor session all', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0027', name: '27_show inventory', command: 'show inventory', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0028', name: '28_show inventory raw', command: 'show inventory raw', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0029', name: '29_show version', command: 'show version', os: 'cisco_iosxe', is_compare: true,is_save: true } #compare
+#- { id: '0030', name: '30_show environment', command: 'show environment', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0031', name: '31_show environment all', command: 'show environment all', os: 'cisco_iosxe', is_compare: false,is_save: true }
+#- { id: '0032', name: '32_show env', command: 'show env', os: 'cisco_iosxe', is_compare: false,is_save: true }
+#- { id: '0033', name: '33_show env all', command: 'show env all', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0034', name: '34_show power', command: 'show power', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0035', name: '35_show logging', command: 'show logging', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0036', name: '36_terminal length 0', command: 'terminal length 0', os: 'cisco_iosxe', is_compare: false,is_save: true }
+#- { id: '0037', name: '37_exit', command: 'exit', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0038', name: '38_show ip route 0.0.0.0', command: 'show ip route 0.0.0.0', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0039', name: '39_show ip ospf neighbor', command: 'show ip ospf nei', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0040', name: '40_show ip eigrp neighbor', command: 'show ip eigrp nei', os: 'cisco_iosxe', is_compare: false,is_save: true }
+#- { id: '0041', name: '41_show module', command: 'show module', os: 'cisco_iosxe', is_compare: false,is_save: true }
+- { id: '0042', name: '42_show ip route 174.100.20.84', command: 'show ip route 174.100.20.84', os: 'cisco_iosxe', is_compare: false,is_save: true }

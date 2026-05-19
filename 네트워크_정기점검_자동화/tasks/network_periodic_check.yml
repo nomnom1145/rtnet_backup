@@ -1,0 +1,239 @@
+---
+- name: 1-가 CPU 사용량 점검
+  raw: |
+    count=0
+
+    while [ $count -lt 10 ]
+    do
+        cpu=$(top -bn1 | awk -F',' '/^%Cpu/ {print $1}')
+
+        if ! echo "$cpu" | grep -q "0.0 us"; then
+            echo "$cpu"
+            exit 0
+        fi
+
+        count=$((count + 1))
+        sleep 1
+    done
+
+    echo "CPU usage still 0.0 us"
+    exit 1
+  register: cpu_usage
+  ignore_errors: false
+
+# - name: 1-가 CPU 사용량 결과 출력
+#   debug:
+#     msg: "사용량 : {{ cpu_usage.stdout }}"
+
+################################################################################################
+
+- name: 1-나 디스크 사용률 점검
+  raw: |
+    mount_points=("/" "/home" "/data")
+
+    for mount_point in "${mount_points[@]}"
+    do
+        disk_info=$(df -hP "$mount_point" 2>/dev/null | awk 'NR==2')
+
+        if [ -z "$disk_info" ]; then
+            echo "[FAIL] ${mount_point} mount point not found"
+            continue
+        fi
+
+        filesystem=$(echo "$disk_info" | awk '{print $1}')
+        size=$(echo "$disk_info" | awk '{print $2}')
+        used=$(echo "$disk_info" | awk '{print $3}')
+        avail=$(echo "$disk_info" | awk '{print $4}')
+        use_per=$(echo "$disk_info" | awk '{print $5}')
+        mounted_on=$(echo "$disk_info" | awk '{print $6}')
+
+        echo "Mount=${mounted_on} || Size=${size} || Used=${used} || Use=${use_per}"
+    done
+  register: disk_result
+  ignore_errors: false
+
+# - name: 1-나 디스크 사용률 결과 출력
+#   debug:
+#     msg: "{{ disk_result.stdout_lines }}"
+
+################################################################################################
+
+- name: 1-다 메모리 사용률 점검
+  raw: |
+    mem_info=$(free -m | awk 'NR==2')
+    total=$(echo "$mem_info" | awk '{print $2}')
+    used=$(echo "$mem_info" | awk '{print $3}')
+    free=$(echo "$mem_info" | awk '{print $4}')
+    use_per=$(echo "$mem_info" | awk '{print $3/$2 * 100}')
+
+    echo "Total=${total}MB || Used=${used}MB "
+  register: mem_result
+  ignore_errors: false
+
+# - name: 1-다 메모리 사용률 결과 출력
+#   debug:
+#     msg: "{{ mem_result.stdout }}"
+
+################################################################################################
+
+- name: 2-가 라우팅 확인
+  raw: |
+    route -n | awk 'NR>2 {print $1 " " $2 " " $3 " " $4 " " $5 " " $6}'
+  register: routing_result
+  ignore_errors: false
+
+# - name: 2-가 라우팅 결과 출력
+#   debug:
+#     msg:
+#       - "execute_user={{ ansible_user }}"
+#       - "{{ routing_result.stdout_lines }}"
+
+################################################################################################
+
+- name: 2-나 인터페이스 설정 확인
+  raw: |
+    interface_file="/etc/sysconfig/network-scripts/ifcfg-ens160"
+
+    grep -E '^(DEVICE|IPADDR|DNS1|DNS2)=' "${interface_file}"
+
+    interface_name=$(awk -F= '/^DEVICE=/ {print $2}' "${interface_file}")
+
+    echo "IF=${interface_name}"
+  register: interface_result
+  ignore_errors: false
+
+# - name: 2-나 인터페이스 설정 결과 출력
+#   debug:
+#     msg:
+#       - "execute_user={{ ansible_user }}"
+#       - "{{ interface_result.stdout_lines }}"
+
+################################################################################################
+
+- name: 현재 실행 계정 확인
+  raw: |
+    whoami
+    id
+    ls -l /var/log/secure*
+  register: user_check_result
+
+# - name: 현재 실행 계정 결과 출력
+#   debug:
+#     msg:
+#       - "execute_user={{ ansible_user }}"
+#       - "{{ user_check_result.stdout_lines }}"
+
+- name: 3-가 사용자 접속로그 확인
+  raw: |
+    echo "실제 명령어 실행 계정=$(whoami)"
+    grep Accepted /var/log/secure* | grep -v "::1" | awk '{print $9"\t"$11"\t"$14}' | sort | uniq
+  register: login_result
+  ignore_errors: false
+
+# - name: 3-가 사용자 접속로그 결과 출력
+#   debug:
+#     msg: |
+#       ssh 접속 계정={{ ansible_user }}
+#       접속 기록:
+#       {{ login_result.stdout }}
+
+################################################################################################
+
+- name: 4-가 서버/WEB/DB 프로세스 기동 상태 확인
+  raw: |
+    printf "%-20s %-30s\n" "NAME" "STATUS"
+
+    docker ps -a --format '{% raw %}{{.Names}}|{{.Status}}{% endraw %}' | while IFS='|' read -r name status
+    do
+      printf "%-20s %-30s\n" "$name" "$status"
+    done
+  register: process_result
+  ignore_errors: false
+
+# - name: 4-가 서버/WEB/DB 프로세스 기동 상태 결과 출력
+#   debug:
+#     msg: |
+#       {{ process_result.stdout | trim }}
+
+################################################################################################
+
+- name: 3. 인벤토리 현황 트리구조 출력 확인 (현재 등록된 호스트 수)
+  raw: "printf 'select count(*) from host_info where is_deleted = 0 and is_enable = 1;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: web_ui_result
+  ignore_errors: false
+
+# - name: 3. 현재 등록된 호스트 수 결과 출력
+#   debug:
+#     msg: |
+#       WEB UI 상태 확인 결과
+
+#       등록 호스트 수 : {{ web_ui_result.stdout | trim }}
+
+################################################################################################
+
+- name: 5. 조직/팀/사용자 관리 메뉴 확인 (현재 등록된 사용자 수)
+  raw: "printf 'select count(*) from user_info;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: user_count_result
+  ignore_errors: false
+
+# - name: 5. 현재 등록된 사용자 수 결과 출력
+#   debug:
+#     msg: |
+#       사용자 수 확인 결과
+
+#       사용자 수 : {{ user_count_result.stdout | trim }}
+
+################################################################################################
+
+- name: 6. 스케쥴 설정 메뉴 확인 (현재 등록된 스케쥴 수)
+  raw: "printf 'select count(*) from schedule_info;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: schedule_count_result
+  ignore_errors: false
+
+# - name: 6. 현재 등록된 스케쥴 수 결과 출력
+#   debug:
+#     msg: |
+#       점검 스케줄 수 확인 결과
+      
+#       스케줄 수 : {{ schedule_count_result.stdout | trim }}
+
+################################################################################################
+
+- name: 7. 통보 설정 메뉴 확인 (현재 등록된 통보 수)
+  raw: "printf 'select count(*) from notification_info;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: notification_count_result
+  ignore_errors: false
+
+# - name: 7. 현재 등록된 통보 수 결과 출력
+#   debug:
+#     msg: |
+#       통보설정 수 확인 결과
+
+#       통보설정 수 : {{ notification_count_result.stdout | trim }}
+
+################################################################################################
+
+- name: 8. 작업 템플릿 메뉴 확인 (현재 등록된 작업 템플릿 수)
+  raw: "printf 'select count(*) from template_info where is_enable = 1;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: template_count_result
+  ignore_errors: false  
+
+# - name: 8. 현재 등록된 작업 템플릿 수 결과 출력
+#   debug:
+#     msg: |
+#       작업템플릿 수 확인 결과
+
+#       작업템플릿 수 : {{ template_count_result.stdout | trim }}
+
+################################################################################################
+
+- name: 13. SFTP 파일 메뉴 확인 (백업관리 SFTP 파일 목록)
+  raw: "printf \"select file_name || '    ' || to_char(create_time, 'YYYY-MM-DD HH24:MI:SS') from sftp_files where create_time >= date_trunc('month', current_date) and create_time < date_trunc('month', current_date) + interval '1 month' order by create_time desc, file_name;\" | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: sftp_file_result
+  ignore_errors: false
+
+# - name: 13. 백업관리 SFTP 파일 목록 결과 출력
+#   debug:
+#     msg: |
+#       백업관리 SFTP 파일 목록 확인 결과
+#       {{ sftp_file_result.stdout | replace('\\n', '\n') }}

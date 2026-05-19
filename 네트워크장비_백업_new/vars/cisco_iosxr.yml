@@ -1,0 +1,21 @@
+---
+backup_commands:   
+- { id: '0001', name: '1_terminal length 0', command: 'terminal length 0', os: 'cisco_ios_xr', compare: false }    
+- { id: '0002', name: '2_show running-config', command: 'show running-config', os: 'cisco_ios_xr', compare: false } #compare
+- { id: '0003', name: '3_show version', command: 'show version', os: 'cisco_ios_xr', compare: false } #compare
+- { id: '0004', name: '4_show platform', command: 'show platform', os: 'cisco_ios_xr', compare: false }
+- { id: '0005', name: '5_show redundancy', command: 'show redundancy', os: 'cisco_ios_xr', compare: false }
+- { id: '0006', name: '6_show processes cpu', command: 'show processes cpu', os: 'cisco_ios_xr', compare: false }
+- { id: '0007', name: '7_show processes memory', command: 'show processes memory', os: 'cisco_ios_xr', compare: false }
+- { id: '0008', name: '8_show interface', command: 'show interface', os: 'cisco_ios_xr', compare: false }
+- { id: '0009', name: '9_show ip interface bri', command: 'show ip interface bri', os: 'cisco_ios_xr', compare: false } #compare
+- { id: '0010', name: '10_show interface bri', command: 'show interface bri', os: 'cisco_ios_xr', compare: false }
+- { id: '0011', name: '11_show interface description', command: 'show interface description', os: 'cisco_ios_xr', compare: false }
+- { id: '0012', name: '12_show cdp nei', command: 'show cdp nei', os: 'cisco_ios_xr', compare: false } #compare
+- { id: '0013', name: '13_show bgp summary', command: 'show bgp summary', os: 'cisco_ios_xr', compare: false }
+- { id: '0014', name: '14_show ip route sum', command: 'show ip route sum', os: 'cisco_ios_xr', compare: false }
+- { id: '0015', name: '15_show ip ospf nei', command: 'show ip ospf nei', os: 'cisco_ios_xr', compare: false }
+- { id: '0016', name: '16_show env all', command: 'show env all', os: 'cisco_ios_xr', compare: false }
+- { id: '0017', name: '17_show logging', command: 'show logging', os: 'cisco_ios_xr', compare: false }
+- { id: '0018', name: '18_terminal length 50', command: 'terminal length 50', os: 'cisco_ios_xr', compare: false }    
+- { id: '0019', name: '19_exit', command: 'exit', os: 'cisco_ios_xr', compare: false }

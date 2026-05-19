@@ -1,0 +1,44 @@
+---
+backup_commands:       
+- { id: '0001', name: '1_terminal length 0', command: 'terminal length 0', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0002', name: '2_show running-config', command: 'show running-config', os: 'nx_os', is_compare: false, is_save: true } #compare
+- { id: '0003', name: '3_show module', command: 'show module', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0004', name: '4_show redundancy states', command: 'show redundancy states', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0005', name: '5_show processes cpu history', command: 'show processes cpu history', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0006', name: '6_show ip interface brief', command: 'show ip interface brief', os: 'nx_os', is_compare: false, is_save: true } #compare
+- { id: '0007', name: '7_show interface brief', command: 'show interface brief', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0008', name: '8_show interface status', command: 'show interface status', os: 'nx_os', is_compare: false, is_save: true } #compare
+- { id: '0009', name: '9_show interface description', command: 'show interface description', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0010', name: '10_show interface trunk', command: 'show interface trunk', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0011', name: '11_show port-channel summary', command: 'show port-channel summary', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0012', name: '12_show lacp counters', command: 'show lacp counters', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0013', name: '13_show vpc', command: 'show vpc', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0014', name: '14_show vpc brief', command: 'show vpc brief', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0015', name: '15_show vpc role', command: 'show vpc role', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0016', name: '16_show vpc peer-keepalive', command: 'show vpc peer-keepalive', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0017', name: '17_show vlan', command: 'show vlan', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0018', name: '18_show spanning-tree', command: 'show spanning-tree', os: 'nx_os', is_compare: false, is_save: true } #compare
+- { id: '0019', name: '19_show spanning-tree summary', command: 'show spanning-tree summary', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0020', name: '20_show spanning-tree root', command: 'show spanning-tree root', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0021', name: '21_show spanning-tree blockedports', command: 'show spanning-tree blockedports', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0022', name: '22_show hsrp brief', command: 'show hsrp brief', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0023', name: '23_show ip arp', command: 'show ip arp', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0024', name: '24_show mac address-table', command: 'show mac address-table', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0025', name: '25_show cdp neighbors', command: 'show cdp neighbors', os: 'nx_os', is_compare: false, is_save: true } #compare
+- { id: '0026', name: '26_show cdp neighbors detail', command: 'show cdp neighbors detail', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0027', name: '27_show monitor session all', command: 'show monitor session all', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0028', name: '28_show inventory all', command: 'show inventory all', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0029', name: '29_show fex', command: 'show fex', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0030', name: '30_show fex detail', command: 'show fex detail', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0031', name: '31_show module fex all', command: 'show module fex all', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0032', name: '32_show environment fex all', command: 'show environment fex all', os: 'nx_os', is_compare: false, is_save: true }
+- { id: '0033', name: '33_show version', command: 'show version', os: 'nx_os', is_compare: false, is_save: true } #compare
+- { id: '0034', name: '34_show environment', command: 'show environment', os: 'nx_os', is_compare: false, is_save: true }    
+- { id: '0035', name: '35_show logging logfile', command: 'show logging logfile', os: 'nx_os', is_compare: false, is_save: true }    
+- { id: '0036', name: '36_show interface transceiver details', command: 'show interface transceiver details', os: 'nx_os', is_compare: false, is_save: true }    
+- { id: '0037', name: "37_show interface | egrep 'CRC'", command: "show interface | egrep 'CRC'", os: 'nx_os', is_compare: false, is_save: true }    
+- { id: '0038', name: "38_show interface | egrep 'input error'", command: "show interface | egrep 'input error'", os: 'nx_os', is_compare: false, is_save: true }    
+- { id: '0039', name: "39_show interface | egrep 'output error'", command: "show interface | egrep 'output error'", os: 'nx_os', is_compare: false, is_save: true }    
+- { id: '0040', name: "40_show interface | egrep 'drop'", command: "show interface | egrep 'drop'", os: 'nx_os', is_compare: false, is_save: true }    
+- { id: '0041', name: '41_terminal length 50', command: 'terminal length 50', os: 'nx_os', is_compare: false, is_save: true }     
+- { id: '0042', name: '42_exit', command: 'exit', os: 'nx_os', is_compare: false, is_save: true }     

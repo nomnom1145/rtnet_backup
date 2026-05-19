@@ -1,0 +1,24 @@
+---
+# extreme 장비는 show log 정보의 양이 너무 많아(2023년6월에 검색하면 22년까지 로그가나옴) 장비에서 지원하는 starting date 옵션을 사용하여 최근 1주일치의 로그정보 백업
+starting: "starting date {{ lookup('ansible.builtin.pipe', 'date -d \"-7 day\" +%m/%d/%Y') }}"
+
+backup_commands:
+- { id: '0001', name: '1_disable clipaging', command: 'disable clipaging', os: 'extreme', is_compare: false, is_save: true }
+- { id: '0002', name: '2_show configuration', command: 'show configuration', os: 'extreme', is_compare: true, is_save: true } #compare
+- { id: '0003', name: '3_show ports no-refresh', command: 'show ports no-refresh', os: 'extreme', is_compare: true, is_save: true } #compare
+- { id: '0004', name: '4_show ospf neighbor', command: 'show ospf neighbor', os: 'extreme', is_compare: false, is_save: true }
+- { id: '0005', name: '5_show edp ports all', command: 'show edp ports all', os: 'extreme', is_compare: true, is_save: true } #compare
+- { id: '0006', name: '6_show vrrp', command: 'show vrrp', os: 'extreme', is_compare: false, is_save: true }
+- { id: '0007', name: '7_show ports configuration no-refresh', command: 'show ports configuration no-refresh', os: 'extreme', is_compare: true, is_save: true } #compare
+- { id: '0008', name: '8_show policy', command: 'show policy', os: 'extreme', is_compare: false, is_save: true }
+- { id: '0009', name: '9_show policy detail', command: 'show policy detail', os: 'extreme', is_compare: false, is_save: true }
+- { id: '0010', name: '10_show stpd detail', command: 'show stpd detail', os: 'extreme', is_compare: true, is_save: true } #compare
+- { id: '0011', name: '11_show vlan', command: 'show vlan', os: 'extreme', is_compare: false, is_save: true }
+#- { id: '0012', name: '12_show configuration | I default', command: 'show configuration | I default', os: 'extreme', is_compare: false, is_save: true }
+- { id: '0013', name: '13_show version', command: 'show version', os: 'extreme', is_compare: true, is_save: true } #compare
+- { id: '0014', name: '14_show cpu-monitoring', command: 'show cpu-monitoring', os: 'extreme', is_compare: false, is_save: true }
+- { id: '0015', name: '15_show memory', command: 'show memory', os: 'extreme', is_compare: false, is_save: true }
+- { id: '0016', name: '16_show log', command: "show log {{ starting }}", os: 'extreme', is_compare: false, is_save: true }
+- { id: '0017', name: '17_show slot', command: 'show slot', os: 'extreme', is_compare: false, is_save: true }
+#- { id: '0018', name: '18_exit', command: 'exit', os: 'extreme', is_compare: false, is_save: true }
+- { id: '0019', name: '19_show iproute | include Default', command: 'show iproute | include Default', os: 'extreme', is_compare: false, is_save: true }

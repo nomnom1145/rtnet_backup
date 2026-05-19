@@ -1,0 +1,3 @@
+---
+- name: make_report
+  hosts: all

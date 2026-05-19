@@ -1,0 +1,27 @@
+---
+backup_commands: 
+- { id: '0001', name: '1_terminal length 1000', command: 'no page', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0002', name: '2_show running-config', command: 'show running-config', os: 'aruba_aruba', is_compare: true, is_save: true} #compare
+- { id: '0003', name: '3_show interface brief', command: 'show interface brief', os: 'aruba_aruba', is_compare: true, is_save: true} #compare
+- { id: '0004', name: '4_show ip ospf neighbor', command: 'show ip ospf neighbor', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0005', name: '5_show cdp neighbors', command: 'show cdp neighbors', os: 'aruba_aruba', is_compare: true, is_save: true} #compare
+- { id: '0006', name: '6_show lldp info remote-device', command: 'show lldp info remote-device', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0007', name: '7_show vrrp summary', command: 'show vrrp summary', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0008', name: '8_show interfaces status', command: 'show interfaces status', os: 'aruba_aruba', is_compare: true, is_save: true} #compare
+- { id: '0009', name: '9_show spanning-tree', command: 'show spanning-tree', os: 'aruba_aruba', is_compare: true, is_save: true} #compare
+- { id: '0010', name: '10_show vlan', command: 'show vlan', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0011', name: '11_show ip route', command: 'show ip route', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0012', name: '12_show running-config | i default', command: 'show running-config | i default', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0013', name: '13_show version', command: 'show version', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0014', name: '14_show system information', command: 'show system information', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0015', name: '15_show cpu', command: 'show cpu', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0016', name: '16_display memory', command: 'display memory', os: 'aruba_aruba', is_compare: false, is_save: true}
+#- { id: '0017', name: '17_show logging', command: 'show logging', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0018', name: '18_show module', command: 'show module', os: 'aruba_aruba', is_compare: false, is_save: true}
+#- { id: '0019', name: '19_exit', command: 'exit', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0020', name: '20_show ip route 0.0.0.0', command: 'show ip route 0.0.0.0', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0021', name: '21_show ip route 10.152.130.1', command: 'show ip route 10.152.130.1', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0022', name: '22_show arp', command: 'show arp', os: 'aruba_aruba', is_compare: false, is_save: true}
+- { id: '0023', name: '23_show mac-address-table', command: 'show mac-address-table', os: 'aruba_aruba', is_compare: false, is_save: true}
+
+ 

@@ -1,0 +1,5 @@
+---
+backup_commands:
+- { id: '0001', name: '1_screen-length 0 temporary', command: 'screen-length 0 temporary', is_compare: false, is_save: true }
+- { id: '0002', name: '2_display version', command: 'display version', is_compare: true, is_save: true } #compare
+- { id: '0003', name: '3_display cu', command: 'display cu', is_compare: false, is_save: true }

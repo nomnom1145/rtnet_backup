@@ -1,0 +1,86 @@
+---
+- name: Initialize merged rows
+  set_fact:
+    merged: []
+
+- name: Build periodic check rows
+  set_fact:
+    merged: "{{ (merged | default([])) + [check_row] }}"
+  loop:
+    - { cmd_id: '1a', cmd_name: 'CPU usage check', result_var: 'cpu_usage' }
+    - { cmd_id: '1b', cmd_name: 'Disk usage check', result_var: 'disk_result' }
+    - { cmd_id: '1c', cmd_name: 'Memory usage check', result_var: 'mem_result' }
+    - { cmd_id: '2a', cmd_name: 'Routing check', result_var: 'routing_result' }
+    - { cmd_id: '2b', cmd_name: 'Interface config check', result_var: 'interface_result' }
+    - { cmd_id: '3a', cmd_name: 'Login history check', result_var: 'login_result' }
+    - { cmd_id: '4', cmd_name: 'Process status check', result_var: 'process_result' }
+    - { cmd_id: '5', cmd_name: 'User menu count check', result_var: 'user_count_result' }
+    - { cmd_id: '6', cmd_name: 'Schedule menu count check', result_var: 'schedule_count_result' }
+    - { cmd_id: '7', cmd_name: 'Notification menu count check', result_var: 'notification_count_result' }
+    - { cmd_id: '8', cmd_name: 'Template menu count check', result_var: 'template_count_result' }
+    - { cmd_id: '13', cmd_name: 'SFTP file menu check', result_var: 'sftp_file_result' }
+  vars:
+    result_ref: "{{ vars[item.result_var] | default({}) }}"
+    stdout_lines_clean: "{{ result_ref.stdout_lines | default([], true) | reject('equalto', '') | list }}"
+    output_text: >-
+      {{
+        (stdout_lines_clean | join('\n') | trim)
+        if (stdout_lines_clean | length) > 0
+        else (result_ref.stdout | default('') | trim)
+      }}
+    message_text: "{{ (result_ref.stderr | default(result_ref.msg) | default('')) | trim }}"
+    upper_output_text: "{{ (output_text | string) | upper }}"
+    success_value: "{{ 1 if (result_ref.rc | default(1) | int) == 0 else 0 }}"
+    pass_value: >-
+      {%- if '[FAIL]' in upper_output_text -%}
+      0
+      {%- elif (result_ref.rc | default(1) | int) == 0 -%}
+      1
+      {%- else -%}
+      0
+      {%- endif -%}
+    check_row:
+      cmd_id: "{{ item.cmd_id }}"
+      name: "{{ item.cmd_name }}"
+      cmd_name: "{{ item.cmd_name }}"
+      cmd: "{{ item.cmd_name }}"
+      host: "{{ fap.host_ip | default(inventory_hostname) }}"
+      host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+      hostname: "{{ inventory_hostname }}"
+      ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+      system: "{{ system | default('linux') }}"
+      report_type: "{{ report_type | default('periodic_network_check') }}"
+      file_path: "{{ file_path | default('') }}"
+      data_key: "{{ data_key | default('server') }}"
+      output: "{{ output_text }}"
+      result: "{{ output_text }}"
+      message: "{{ message_text }}"
+      failure_reason: "{{ message_text }}"
+      is_success: "{{ success_value | int }}"
+      is_pass: "{{ pass_value | int }}"
+      check_result: "{{ 'PASS' if (pass_value | int) == 1 else 'FAIL' }}"
+      status: "{{ 'SUCCESS' if (success_value | int) == 1 else 'FAILED' }}"
+
+- name: Print merged row count
+  debug:
+    msg: "merged rows prepared: {{ merged | length }}"
+
+- name: Save report data
+  become: false
+  delegate_to: localhost
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: /usr/bin/python3.12
+  fap.common.save_data:
+    content:
+      data_list: "{{ merged }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: "{{ data_type }}"
+    data_key: "{{ data_key }}"
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  register: db_save
+  when:
+    - merged is defined
+    - (merged | length) > 0

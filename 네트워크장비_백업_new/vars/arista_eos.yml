@@ -1,0 +1,3 @@
+---
+backup_commands:   
+- { id: '0001', name: '1_show running-config', command: 'show running-config', os: 'eos', is_compare: false, is_save: true } #compare   

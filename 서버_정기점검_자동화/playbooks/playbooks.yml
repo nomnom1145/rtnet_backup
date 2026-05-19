@@ -1,0 +1,28 @@
+---
+- name: 서버파트_FALCON_정기점검_문서생성
+  hosts: all
+  ignore_errors: false
+  ignore_unreachable: false
+  gather_facts: false
+  vars_files:
+    - "../vars/common.yml"
+  pre_tasks:
+    - name: 연결 상태 확인
+      include_tasks: "../tasks/con_check.yml"
+      register: con_check
+
+  tasks:
+    - name: 점검 실행
+      include_tasks: "../tasks/server_periodic_check.yml"
+      register: check_task
+      when: con_check.stdout is defined
+
+    - name: 점검 결과 확인
+      debug:
+        var: check_task
+
+    - name: save to DB
+      include_tasks: "../tasks/save_to_db.yml"
+
+    - name: 보고서 생성
+      include_tasks: "../tasks/make_report.yml"

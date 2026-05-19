@@ -1,0 +1,33 @@
+---
+# vsh_commands:
+# - { id: '0001', name: 'vsh', command: 'vsh', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0002', name: 'sleep', command: 'sleep 10', os: 'sdn_os', is_compare: false, is_save: true }
+backup_commands:
+- { id: '0001', name: '1_vsh', command: 'vsh', os: 'sdn_os', is_compare: false, is_save: true }
+- { id: '0002', name: '2_sleep', command: 'sleep 10', os: 'sdn_os', is_compare: false, is_save: true }
+- { id: '0003', name: '3_terminal length 0', command: 'terminal length 0', os: 'sdn_os', is_compare: false, is_save: true }
+- { id: '0004', name: '4_show interface status | exc Vlan | exc Tunnel | exc Lo', command: 'show interface status | exc Vlan | exc Tunnel | exc Lo', os: 'sdn_os', is_compare: false, is_save: true }
+- { id: '0005', name: '5_show interface status', command: 'show interface status', os: 'sdn_os', is_compare: false, is_save: true }
+- { id: '0006', name: '6_show lldp neighbors', command: 'show lldp neighbors', os: 'sdn_os', is_compare: false, is_save: true }
+- { id: '0007', name: '7_show cdp neighbors', command: 'show cdp neighbors', os: 'sdn_os', is_compare: false, is_save: true }
+- { id: '0008', name: '8_show ip route vrf all summary', command: 'show ip route vrf all summary', os: 'sdn_os', is_compare: false, is_save: true }
+
+# backup_commands:
+# - { id: '0001', name: '1_terminal length 0', command: 'terminal length 0', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0002', name: '2_show version', command: 'show version', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0003', name: '3_show vlan extended', command: 'show vlan extended', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0004', name: '4_show interface status', command: 'show interface status', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0005', name: '5_show ip interface brief', command: 'show ip interface brief', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0006', name: '6_show interface counters errors', command: 'show interface counters errors', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0007', name: '7_show vpc', command: 'show vpc', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0008', name: '8_show vpc brief', command: 'show vpc brief', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0009', name: '9_show vpc role', command: 'show vpc role', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0010', name: '10_show vpc peer-keepalive', command: 'show vpc peer-keepalive', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0011', name: '11_show endpoint', command: 'show endpoint', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0012', name: '12_show port-channel summary', command: 'show port-channel summary', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0013', name: '13_show cdp neighbors', command: 'show cdp neighbors', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0014', name: '14_show cdp neighbors detail', command: 'show cdp neighbors detail', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0015', name: '15_show lldp neighbors', command: 'show lldp neighbors', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0015', name: '15_show lldp neighbors detail', command: 'show lldp neighbors detail', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0016', name: '16_show inventory', command: 'show inventory', os: 'sdn_os', is_compare: false, is_save: true }
+# - { id: '0017', name: '17_show interface transceiver details', command: 'show interface transceiver details', os: 'sdn_os', is_compare: false, is_save: true }

@@ -1,0 +1,19 @@
+---
+backup_commands:    
+- { id: '0001', name: '1_show run', command: 'show run', os: 'ns_os', is_compare: true, is_save: true } #compare
+- { id: '0002', name: '2_show config', command: 'show config', os: 'ns_os', is_compare: false, is_save: true }
+- { id: '0003', name: '3_stat system detail', command: 'stat system detail', os: 'ns_os', is_compare: true, is_save: true } #compare
+- { id: '0004', name: '4_show ns events', command: 'show ns events', os: 'ns_os', is_compare: false, is_save: true }
+- { id: '0005', name: '5_show interface', command: 'show interface', os: 'ns_os', is_compare: false, is_save: true }
+- { id: '0006', name: '6_show channel', command: 'show channel', os: 'ns_os', is_compare: false, is_save: true }
+- { id: '0007', name: '7_show ha node', command: 'show ha node', os: 'ns_os', is_compare: true, is_save: true } #compare
+- { id: '0008', name: '8_show vlan', command: 'show vlan', os: 'ns_os', is_compare: false, is_save: true }
+- { id: '0009', name: '9_show ip', command: 'show ip', os: 'ns_os', is_compare: false, is_save: true }
+- { id: '0010', name: '10_show arp', command: 'show arp', os: 'ns_os', is_compare: false, is_save: true }
+- { id: '0011', name: '11_show route', command: 'show route', os: 'ns_os', is_compare: false, is_save: true }
+- { id: '0012', name: '12_show service', command: 'show service', os: 'ns_os', is_compare: true, is_save: true } #compare
+- { id: '0013', name: '13_show service -sum', command: 'show service -sum', os: 'ns_os', is_compare: true, is_save: true } #compare
+- { id: '0014', name: '14_show lb vserver', command: 'show lb vserver', os: 'ns_os', is_compare: true, is_save: true } #compare
+- { id: '0015', name: '15_show lb vserver -sum', command: 'show lb vserver -sum', os: 'ns_os', is_compare: true, is_save: true } #compare
+- { id: '0016', name: '16_show version', command: 'show version', os: 'ns_os', is_compare: true, is_save: true } #compare
+- { id: '0017', name: '17_show connectiontable', command: 'show connectiontable', os: 'ns_os', is_compare: true, is_save: true } #compare
