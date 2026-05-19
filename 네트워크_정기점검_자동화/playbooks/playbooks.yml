@@ -23,10 +23,6 @@
       register: check_task
       when: con_check.stdout is defined
 
-    - name: 점검 결과 확인
-      debug:
-        var: check_task
-
     - name: save to DB
       include_tasks: "../tasks/save_to_db.yml"
 
