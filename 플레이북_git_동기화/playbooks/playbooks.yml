@@ -24,6 +24,13 @@
       register: branch_folder
       delegate_to: localhost
 
+    - name: branch 폴더 존재 여부 출력
+      debug:
+        msg:
+          - "path={{ git_dest_path }}"
+          - "exists={{ branch_folder.stat.exists }}"
+      delegate_to: localhost
+
     - name: branch 폴더 존재 시 현재 시간 조회
       command: date +%Y%m%d_%H%M%S
       register: backup_timestamp
@@ -39,6 +46,17 @@
           - "{{ git_dest_path }}_{{ backup_timestamp.stdout }}"
       when: branch_folder.stat.exists
       delegate_to: localhost
+
+    - name: branch 폴더 변경 결과 확인
+      shell: |
+        ls -ld /home/fap/rtnet_backup* 2>/dev/null || true
+      register: backup_dir_result
+      changed_when: false
+      delegate_to: localhost
+
+    - name: branch 폴더 변경 결과 출력
+      debug:
+        var: backup_dir_result.stdout_lines
 
   tasks:
     - name: Git 저장소 Clone 또는 Pull 수행
