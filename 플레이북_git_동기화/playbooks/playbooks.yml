@@ -6,9 +6,10 @@
   vars_files:
     - "../vars/common.yml" # 공통변수
     - "/fap/ansible/projects/플레이북_git_동기화/templates/vault_mail.yml"
-  pre_tasks:
-    - name: branch 사전 작업
-      include_tasks: "../tasks/branch_check.yml"
+
+  # pre_tasks:
+  #   - name: branch 사전 작업
+  #     include_tasks: "../tasks/branch_check.yml"
 
   tasks:
     - name: Git 저장소 Clone 또는 Pull 수행

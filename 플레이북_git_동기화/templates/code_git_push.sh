@@ -150,6 +150,14 @@ print_section "Git 커밋 준비"
 
 git add .
 
+# 민감 파일 Git 제외
+git reset -- 플레이북_git_동기화/id_ed25519 2>/dev/null || true
+git reset -- 플레이북_git_동기화/id_ed25519.pub 2>/dev/null || true
+git reset -- 플레이북_git_동기화/id_ed25519_new 2>/dev/null || true
+git reset -- 플레이북_git_동기화/id_ed25519_new.pub 2>/dev/null || true
+git reset -- 플레이북_git_동기화/.vault_pass.txt 2>/dev/null || true
+git reset -- 플레이북_git_동기화/templates/vault_mail.yml 2>/dev/null || true
+
 echo "[커밋 대상 요약]"
 git --no-pager diff --cached --stat
 
