@@ -9,7 +9,7 @@
   vars:
     git_repo_url: "git@github.com:nomnom1145/rtnet_backup.git"
     git_dest_path: "/home/fap/rtnet_backup"
-    git_ssh_key_path: "/fap/ansible/projects/플레이북_git_동기화/id_ed25519_new"
+    git_ssh_key_path: "/fap/ansible/keys/id_ed25519_ansible_sync"
     git_sync_script_path: "/fap/ansible/projects/플레이북_git_동기화/templates/code_git_push.sh"
 
     mail_smtp_host: "smtp.gmail.com"
