@@ -12,6 +12,9 @@ active_command_list:
   - name: 패스워드 확인
     command: cat /etc/passwd
 
+  - name: 테스트
+    command: cat /proc/mounts | awk '/iso9660/ || /udf/ || /isofs/'
+
 x_commands:
   - "hostname"
   - "reboot"
