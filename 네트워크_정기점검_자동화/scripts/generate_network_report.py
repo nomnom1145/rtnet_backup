@@ -9,7 +9,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from openpyxl import load_workbook
-from openpyxl.utils import column_index_from_string, get_column_letter
+from openpyxl.utils import get_column_letter
 
 CPU_THRESHOLD = 80.0
 DISK_THRESHOLD = 80.0
@@ -136,16 +136,41 @@ def copy_cell_style(ws, source_ref, target_ref):
     target.protection = copy(source.protection)
 
 
-def copy_column_width(ws, source_col_idx, target_col_idx):
-    source_letter = get_column_letter(source_col_idx)
-    target_letter = get_column_letter(target_col_idx)
-    source_dim = ws.column_dimensions[source_letter]
-    target_dim = ws.column_dimensions[target_letter]
-    target_dim.width = source_dim.width
-    target_dim.hidden = source_dim.hidden
-    target_dim.bestFit = source_dim.bestFit
-    target_dim.outlineLevel = source_dim.outlineLevel
-    target_dim.collapsed = source_dim.collapsed
+def capture_sheet_layout(ws, columns):
+    return {
+        "scale": ws.page_setup.scale,
+        "fitToWidth": ws.page_setup.fitToWidth,
+        "fitToHeight": ws.page_setup.fitToHeight,
+        "orientation": ws.page_setup.orientation,
+        "paperSize": ws.page_setup.paperSize,
+        "margins": (
+            ws.page_margins.left,
+            ws.page_margins.right,
+            ws.page_margins.top,
+            ws.page_margins.bottom,
+            ws.page_margins.header,
+            ws.page_margins.footer,
+        ),
+        "column_widths": {col: ws.column_dimensions[col].width for col in columns},
+    }
+
+
+def restore_sheet_layout(ws, layout):
+    ws.page_setup.scale = layout["scale"]
+    ws.page_setup.fitToWidth = layout["fitToWidth"]
+    ws.page_setup.fitToHeight = layout["fitToHeight"]
+    ws.page_setup.orientation = layout["orientation"]
+    ws.page_setup.paperSize = layout["paperSize"]
+    (
+        ws.page_margins.left,
+        ws.page_margins.right,
+        ws.page_margins.top,
+        ws.page_margins.bottom,
+        ws.page_margins.header,
+        ws.page_margins.footer,
+    ) = layout["margins"]
+    for col, width in layout["column_widths"].items():
+        ws.column_dimensions[col].width = width
 
 
 def find_first(lines, prefix):
@@ -300,26 +325,7 @@ def expand_merged_text_block(ws, cell_ref, next_row, text, horizontal="left"):
     end_row = merged_range.max_row
     start_col = merged_range.min_col
     end_col = merged_range.max_col
-    row_count = (end_row - start_row) + 1
     lines = clean_lines(text)
-    line_count = max(1, len(lines))
-    extra_rows = max(0, line_count - row_count)
-
-    if extra_rows > 0:
-        ws.insert_rows(next_row, amount=extra_rows)
-        default_height = ws.row_dimensions[start_row].height or ws.sheet_format.defaultRowHeight or 15
-        for row_idx in range(next_row, next_row + extra_rows):
-            ws.row_dimensions[row_idx].height = default_height
-
-    merged_ref = str(merged_range)
-    ws.unmerge_cells(merged_ref)
-    ws.merge_cells(
-        start_row=start_row,
-        start_column=start_col,
-        end_row=end_row + extra_rows,
-        end_column=end_col,
-    )
-
     if horizontal == "left":
         set_left_result_cell(ws, cell_ref, "\n".join(lines) if lines else MISSING_TEXT)
     else:
@@ -360,26 +366,17 @@ def write_disk_section(ws, disk_rows, row_map):
 
 
 def write_process_table(ws, table_config, process_rows):
-    start_col = column_index_from_string(table_config["start_col"])
-    service_row = table_config["service_row"]
-    status_row = table_config["status_row"]
-    base_columns = table_config["base_columns"]
-    total_columns = max(base_columns, len(process_rows))
+    service_cells = table_config["service_cells"]
+    status_cells = table_config["status_cells"]
+    service_style_source = table_config.get("service_style_source")
+    status_style_source = table_config.get("status_style_source")
 
-    service_cells = [f"{get_column_letter(start_col + index)}{service_row}" for index in range(total_columns)]
-    status_cells = [f"{get_column_letter(start_col + index)}{status_row}" for index in range(total_columns)]
-    service_style_source = table_config.get("service_style_source") or f"{get_column_letter(start_col)}{service_row}"
-    status_style_source = table_config.get("status_style_source") or f"{get_column_letter(start_col)}{status_row}"
-    width_source_start = table_config.get("width_source_start_col", start_col)
-
-    for index, target_ref in enumerate(service_cells):
-        source_col_idx = width_source_start + min(index, base_columns - 1)
-        target_col_idx = start_col + index
-        copy_column_width(ws, source_col_idx, target_col_idx)
-        copy_cell_style(ws, service_style_source, target_ref)
-
-    for index, target_ref in enumerate(status_cells):
-        copy_cell_style(ws, status_style_source, target_ref)
+    if service_style_source:
+        for target_ref in service_cells:
+            copy_cell_style(ws, service_style_source, target_ref)
+    if status_style_source:
+        for target_ref in status_cells:
+            copy_cell_style(ws, status_style_source, target_ref)
 
     if process_rows:
         for index, service_cell in enumerate(service_cells):
@@ -446,6 +443,7 @@ def main():
 
     wb = load_workbook(template_path)
     ws = wb["Sheet1"]
+    preserved_layout = capture_sheet_layout(ws, ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"])
 
     report_date = data.get("report_date") or datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y년 %m월 %d일")
     set_result_cell(ws, "C3", report_date)
@@ -467,13 +465,10 @@ def main():
         "login": "A127",
         "login_next_row": 135,
         "process_table": {
-            "start_col": "B",
-            "service_row": 152,
-            "status_row": 153,
-            "base_columns": 6,
+            "service_cells": ["B152", "C152", "D152", "E152", "F152", "G152"],
+            "status_cells": ["B153", "C153", "D153", "E153", "F153", "G153"],
             "service_style_source": "B152",
             "status_style_source": "B153",
-            "width_source_start_col": 2,
         },
     }
 
@@ -491,13 +486,10 @@ def main():
         "login": "A136",
         "login_next_row": 144,
         "process_table": {
-            "start_col": "B",
-            "service_row": 155,
-            "status_row": 156,
-            "base_columns": 6,
-            "service_style_source": "E155",
-            "status_style_source": "E156",
-            "width_source_start_col": 2,
+            "service_cells": ["B155", "C155", "D155", "E155", "F155", "G155"],
+            "status_cells": ["B156", "C156", "D156", "E156", "F156", "G156"],
+            "service_style_source": "B155",
+            "status_style_source": "B156",
         },
     }
 
@@ -514,6 +506,16 @@ def main():
     set_result_cell(ws, "F179", "\n".join(sftp_lines) if sftp_lines else MISSING_TEXT)
     write_login_section(ws, data.get("second_host", {}), lower_section)
     write_login_section(ws, data.get("first_host", {}), upper_section)
+    restore_sheet_layout(ws, preserved_layout)
+
+    # 인쇄 폼 너비에 맞추기 설정
+    if getattr(ws.sheet_properties, 'pageSetUpPr', None) is None:
+        from openpyxl.worksheet.properties import PageSetupProperties
+        ws.sheet_properties.pageSetUpPr = PageSetupProperties()
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToHeight = 0
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_path)

@@ -1,27 +1,170 @@
+# ---
+# - name: Git 동기화 결과를 메일로 전송
+#   hosts: all
+#   gather_facts: false
+#   ignore_errors: true
+
+#   vars_files:
+#     - "/fap/ansible/projects/플레이북_git_동기화/templates/vault_mail.yml"
+
+#   vars:
+#     mail_smtp_host: "smtp.gmail.com"
+#     mail_smtp_port: 587
+#     mail_from: "{{ vault_mail_smtp_username }}"
+#     # mail_to: "sg.jang@gmail.com" # 보낸 편지함에선 확인 가능
+#     mail_to: "sg.jang@rtnet.co.kr" # 받은 편지함에서 확인 가능
+
+#   pre_tasks:
+#     - name: branch 폴더 존재 여부 확인
+#       stat:
+#         path: /home/fap/rtnet_backup
+#       register: branch_folder
+
+#     - name: branch 폴더 존재 시 현재 시간 조회
+#       command: date +%Y%m%d_%H%M%S
+#       register: backup_timestamp
+#       changed_when: false
+#       when: branch_folder.stat.exists
+
+#     - name: branch 폴더 존재 시 폴더명 변경
+#       command:
+#         argv:
+#           - mv
+#           - /home/fap/rtnet_backup
+#           - "/home/fap/rtnet_backup_{{ backup_timestamp.stdout }}"
+#       when: branch_folder.stat.exists
+
+#   tasks:
+#     - name: Git 저장소 Clone 또는 Pull 수행
+#       git:
+#         repo: git@github.com:nomnom1145/rtnet_backup.git
+#         dest: /home/fap/rtnet_backup
+#         version: main
+#         update: true
+#         accept_hostkey: true
+#       environment:
+#         GIT_SSH_COMMAND: >-
+#           ssh
+#           -i /fap/ansible/projects/플레이북_git_동기화/id_ed25519
+#           -o IdentitiesOnly=yes
+#           -o StrictHostKeyChecking=accept-new
+#       delegate_to: localhost
+
+#     - name: 스크립트 파일 실행(git 동기화)
+#       raw: sh /fap/ansible/projects/플레이북_git_동기화/templates/code_git_push.sh
+#       register: sh_test
+
+#     - name: 스크립트 실행 디버그
+#       debug:
+#         var: sh_test
+
+#     - name: 작업 결과 메일 전송
+#       community.general.mail:
+#         host: "{{ mail_smtp_host }}"
+#         port: "{{ mail_smtp_port }}"
+#         username: "{{ vault_mail_smtp_username }}"
+#         password: "{{ vault_mail_smtp_password }}"
+#         secure: starttls
+#         from: "{{ mail_from }}"
+#         to: "{{ mail_to }}"
+#         subject: "[Ansible] Git 동기화 결과 - {{ inventory_hostname }}"
+#         body: |
+#           [Ansible Git 동기화 결과]
+
+#           호스트:
+#             - {{ inventory_hostname }}
+
+#           실행 결과:
+#           {% if sh_test.rc == 0 %}
+#             - 성공
+#           {% else %}
+#             - 실패
+#           {% endif %}
+
+#           Return Code:
+#             - {{ sh_test.rc }}
+
+#           표준 출력(stdout):
+#             - {{ sh_test.stdout | default('출력 없음') }}
+
+#           표준 에러(stderr):
+#             - {{ sh_test.stderr | default('에러 없음') }}
+#       delegate_to: localhost
+
 ---
 - name: Git 동기화 결과를 메일로 전송
   hosts: all
   gather_facts: false
-  ignore_errors: true
 
   vars_files:
     - "/fap/ansible/projects/플레이북_git_동기화/templates/vault_mail.yml"
 
   vars:
+    git_repo_url: "git@github.com:nomnom1145/rtnet_backup.git"
+    git_dest_path: "/home/fap/rtnet_backup"
+    git_ssh_key_path: "/fap/ansible/projects/플레이북_git_동기화/id_ed25519"
+    git_sync_script_path: "/fap/ansible/projects/플레이북_git_동기화/templates/code_git_push.sh"
+
     mail_smtp_host: "smtp.gmail.com"
     mail_smtp_port: 587
     mail_from: "{{ vault_mail_smtp_username }}"
-    # mail_to: "sg.jang@gmail.com" # 보낸 편지함에선 확인 가능
-    mail_to: "sg.jang@rtnet.co.kr" # 받은 편지함에서 확인 가능
+    mail_to: "sg.jang@rtnet.co.kr"
+
+  pre_tasks:
+    - name: branch 폴더 존재 여부 확인
+      stat:
+        path: "{{ git_dest_path }}"
+      register: branch_folder
+      delegate_to: localhost
+
+    - name: branch 폴더 존재 시 현재 시간 조회
+      command: date +%Y%m%d_%H%M%S
+      register: backup_timestamp
+      changed_when: false
+      when: branch_folder.stat.exists
+      delegate_to: localhost
+
+    - name: branch 폴더 존재 시 폴더명 변경
+      command:
+        argv:
+          - mv
+          - "{{ git_dest_path }}"
+          - "{{ git_dest_path }}_{{ backup_timestamp.stdout }}"
+      when: branch_folder.stat.exists
+      delegate_to: localhost
 
   tasks:
-    - name: 스크립트 파일 실행(git 동기화)
-      raw: sh /fap/ansible/projects/플레이북_git_동기화/templates/code_git_push.sh
-      register: sh_test
+    - name: Git 저장소 Clone 또는 Pull 수행
+      git:
+        repo: "{{ git_repo_url }}"
+        dest: "{{ git_dest_path }}"
+        version: main
+        update: true
+        accept_hostkey: true
+      environment:
+        GIT_SSH_COMMAND: >-
+          ssh
+          -i {{ git_ssh_key_path }}
+          -o IdentitiesOnly=yes
+          -o StrictHostKeyChecking=accept-new
+      register: git_result
+      delegate_to: localhost
 
-    - name: 스크립트 실행 디버그
-      debug:
-        var: sh_test
+    - name: 스크립트 파일 실행
+      command:
+        argv:
+          - sh
+          - "{{ git_sync_script_path }}"
+      register: sh_test
+      changed_when: true
+      delegate_to: localhost
+      ignore_errors: true
+      environment:
+        GIT_SSH_COMMAND: >-
+          ssh
+          -i {{ git_ssh_key_path }}
+          -o IdentitiesOnly=yes
+          -o StrictHostKeyChecking=accept-new
 
     - name: 작업 결과 메일 전송
       community.general.mail:
@@ -39,7 +182,10 @@
           호스트:
             - {{ inventory_hostname }}
 
-          실행 결과:
+          Git 결과:
+            - {{ git_result.after | default('정보 없음') }}
+
+          스크립트 실행 결과:
           {% if sh_test.rc == 0 %}
             - 성공
           {% else %}
@@ -47,7 +193,7 @@
           {% endif %}
 
           Return Code:
-            - {{ sh_test.rc }}
+            - {{ sh_test.rc | default('정보 없음') }}
 
           표준 출력(stdout):
             - {{ sh_test.stdout | default('출력 없음') }}
