@@ -44,7 +44,9 @@
           }}
 
     - name: Save report data
+      delegate_to: localhost
       connection: local
+      become: false
       vars:
         ansible_connection: local
         ansible_python_interpreter: /usr/bin/python3
@@ -58,7 +60,9 @@
         template_id: "{{ fap.template_id | default(omit) }}"
         job_id: "{{ fap.job_id | default(omit) }}"
       register: db_save
-      when: merged is defined and (merged | length) > 0
+      when: 
+        - merged is defined
+        - merged | length > 0 
 
   post_tasks:
     - name: 보고서 데이터 통합
