@@ -1,0 +1,36 @@
+---
+- name: 작업 결과 메일 전송
+  community.general.mail:
+    host: "{{ mail_smtp_host }}"
+    port: "{{ mail_smtp_port }}"
+    username: "{{ vault_mail_smtp_username }}"
+    password: "{{ vault_mail_smtp_password }}"
+    secure: starttls
+    from: "{{ mail_from }}"
+    to: "{{ mail_to }}"
+    subject: "[Ansible] Git 동기화 결과 - {{ inventory_hostname }}"
+    body: |
+      [Ansible Git 동기화 결과]
+
+      호스트:
+        - {{ inventory_hostname }}
+
+      Git 결과:
+        - {{ git_result.after | default('정보 없음') }}
+
+      스크립트 실행 결과:
+      {% if sh_test.rc == 0 %}
+        - 성공
+      {% else %}
+        - 실패
+      {% endif %}
+
+      Return Code:
+        - {{ sh_test.rc | default('정보 없음') }}
+
+      표준 출력(stdout):
+        - {{ sh_test.stdout | default('출력 없음') }}
+
+      표준 에러(stderr):
+        - {{ sh_test.stderr | default('에러 없음') }}
+  delegate_to: localhost

@@ -1,0 +1,45 @@
+---
+- name: branch 폴더 존재 여부 확인
+  stat:
+    path: "{{ git_dest_path }}"
+  register: branch_folder
+  delegate_to: localhost
+
+- name: branch 폴더 존재 여부 출력
+  debug:
+    msg:
+      - "path={{ git_dest_path }}"
+      - "exists={{ branch_folder.stat.exists }}"
+  delegate_to: localhost
+
+- name: branch 폴더 존재 시 현재 시간 조회
+  command: date +%Y%m%d_%H%M%S
+  register: backup_timestamp
+  changed_when: false
+  when: branch_folder.stat.exists
+  delegate_to: localhost
+
+- name: branch 폴더 존재 시 폴더명 변경
+  command:
+    argv:
+      - mv
+      - "{{ git_dest_path }}"
+      - "{{ git_dest_path }}_{{ backup_timestamp.stdout }}"
+  when: branch_folder.stat.exists
+  delegate_to: localhost
+
+- name: branch 폴더 변경 결과 확인
+  shell: |
+    ls -ld /home/fap/rtnet_backup* 2>/dev/null || true
+  register: backup_dir_result
+  changed_when: false
+  delegate_to: localhost
+
+- name: branch 폴더 변경 결과 출력
+  debug:
+    var: backup_dir_result.stdout_lines
+
+- name: 오래된 rtnet_backup 백업 폴더 삭제
+  shell: find /home/fap -maxdepth 1 -type d -name 'rtnet_backup_20*' -mtime +30 -exec rm -rf {} +
+  changed_when: false
+  delegate_to: localhost
