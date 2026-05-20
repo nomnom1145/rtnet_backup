@@ -9,7 +9,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from openpyxl import load_workbook
-from openpyxl.utils import column_index_from_string, get_column_letter
+from openpyxl.utils import get_column_letter
 
 CPU_THRESHOLD = 80.0
 DISK_THRESHOLD = 80.0
@@ -20,14 +20,6 @@ NORMAL_TEXT = "정상"
 VULNERABLE_TEXT = "취약"
 LINE_HEIGHT = 15
 LINE_PADDING = 6
-TARGET_PROCESS_NAMES = {
-    "fap-agent",
-    "fap-web",
-    "fap-manager-0",
-    "fap-haproxy",
-    "redis-0",
-    "pg-0",
-}
 
 
 def clean_lines(value):
@@ -122,30 +114,6 @@ def set_left_result_cell(ws, cell_ref, value):
     cell = set_cell_alignment(ws, cell_ref, "left")
     cell.value = value
     auto_adjust_row_height(ws, cell_ref, value)
-
-
-def copy_cell_style(ws, source_ref, target_ref):
-    source = ws[source_ref]
-    target = ws[target_ref]
-    target._style = copy(source._style)
-    target.font = copy(source.font)
-    target.fill = copy(source.fill)
-    target.border = copy(source.border)
-    target.alignment = copy(source.alignment)
-    target.number_format = source.number_format
-    target.protection = copy(source.protection)
-
-
-def copy_column_width(ws, source_col_idx, target_col_idx):
-    source_letter = get_column_letter(source_col_idx)
-    target_letter = get_column_letter(target_col_idx)
-    source_dim = ws.column_dimensions[source_letter]
-    target_dim = ws.column_dimensions[target_letter]
-    target_dim.width = source_dim.width
-    target_dim.hidden = source_dim.hidden
-    target_dim.bestFit = source_dim.bestFit
-    target_dim.outlineLevel = source_dim.outlineLevel
-    target_dim.collapsed = source_dim.collapsed
 
 
 def find_first(lines, prefix):
@@ -327,8 +295,7 @@ def expand_merged_text_block(ws, cell_ref, next_row, text, horizontal="left"):
 
 
 def parse_process(lines):
-    result = []
-    seen = set()
+    result = {}
     for line in lines:
         if line.startswith("NAME") or line.startswith("STATUS"):
             continue
@@ -336,11 +303,8 @@ def parse_process(lines):
         if not parts:
             continue
         name = parts[0]
-        if name not in TARGET_PROCESS_NAMES or name in seen:
-            continue
         status = parts[1] if len(parts) > 1 else ""
-        result.append((name, normalize_process_status(status)))
-        seen.add(name)
+        result[name] = normalize_process_status(status)
     return result
 
 
@@ -359,41 +323,13 @@ def write_disk_section(ws, disk_rows, row_map):
             set_result_cell(ws, f"E{row}", CHECK_NEEDED_TEXT)
 
 
-def write_process_table(ws, table_config, process_rows):
-    start_col = column_index_from_string(table_config["start_col"])
-    service_row = table_config["service_row"]
-    status_row = table_config["status_row"]
-    base_columns = table_config["base_columns"]
-    total_columns = max(base_columns, len(process_rows))
-
-    service_cells = [f"{get_column_letter(start_col + index)}{service_row}" for index in range(total_columns)]
-    status_cells = [f"{get_column_letter(start_col + index)}{status_row}" for index in range(total_columns)]
-    service_style_source = table_config.get("service_style_source") or f"{get_column_letter(start_col)}{service_row}"
-    status_style_source = table_config.get("status_style_source") or f"{get_column_letter(start_col)}{status_row}"
-    width_source_start = table_config.get("width_source_start_col", start_col)
-
-    for index, target_ref in enumerate(service_cells):
-        source_col_idx = width_source_start + min(index, base_columns - 1)
-        target_col_idx = start_col + index
-        copy_column_width(ws, source_col_idx, target_col_idx)
-        copy_cell_style(ws, service_style_source, target_ref)
-
-    for index, target_ref in enumerate(status_cells):
-        copy_cell_style(ws, status_style_source, target_ref)
-
-    if process_rows:
-        for index, service_cell in enumerate(service_cells):
-            if index < len(process_rows):
-                name, status = process_rows[index]
-                set_result_cell(ws, service_cell, name)
-                set_result_cell(ws, status_cells[index], status)
-            else:
-                set_result_cell(ws, service_cell, "")
-                set_result_cell(ws, status_cells[index], "")
+def write_process_row(ws, cell_map, process_map):
+    if process_map:
+        for name, cell_ref in cell_map.items():
+            set_result_cell(ws, cell_ref, process_map.get(name, MISSING_TEXT))
     else:
-        for index, service_cell in enumerate(service_cells):
-            set_result_cell(ws, service_cell, MISSING_TEXT if index == 0 else "")
-            set_result_cell(ws, status_cells[index], "")
+        for index, cell_ref in enumerate(cell_map.values()):
+            set_result_cell(ws, cell_ref, MISSING_TEXT if index == 0 else "")
 
 
 def write_host_section(ws, host_data, section):
@@ -417,8 +353,8 @@ def write_host_section(ws, host_data, section):
     set_result_cell(ws, section["interface_dns"], interface["dns"])
     set_result_cell(ws, section["interface_if"], interface["if"])
 
-    process_rows = parse_process(clean_lines(host_data.get("process_output")))
-    write_process_table(ws, section["process_table"], process_rows)
+    process_map = parse_process(clean_lines(host_data.get("process_output")))
+    write_process_row(ws, section["process_cells"], process_map)
 
 
 def write_login_section(ws, host_data, section):
@@ -466,14 +402,13 @@ def main():
         "interface_if": "B114",
         "login": "A127",
         "login_next_row": 135,
-        "process_table": {
-            "start_col": "B",
-            "service_row": 152,
-            "status_row": 153,
-            "base_columns": 6,
-            "service_style_source": "B152",
-            "status_style_source": "B153",
-            "width_source_start_col": 2,
+        "process_cells": {
+            "fap-agent": "B153",
+            "fap-manager-0": "C153",
+            "fap-web": "D153",
+            "pg-0": "E153",
+            "fap-haproxy": "F153",
+            "redis-0": "G153",
         },
     }
 
@@ -490,14 +425,13 @@ def main():
         "interface_if": "B119",
         "login": "A136",
         "login_next_row": 144,
-        "process_table": {
-            "start_col": "B",
-            "service_row": 155,
-            "status_row": 156,
-            "base_columns": 6,
-            "service_style_source": "E155",
-            "status_style_source": "E156",
-            "width_source_start_col": 2,
+        "process_cells": {
+            "fap-agent": "B156",
+            "fap-manager-0": "C156",
+            "fap-web": "D156",
+            "pg-0": "E156",
+            "fap-haproxy": "F156",
+            "redis-0": "G156",
         },
     }
 

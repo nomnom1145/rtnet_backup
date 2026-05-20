@@ -9,7 +9,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from openpyxl import load_workbook
-from openpyxl.utils import column_index_from_string, get_column_letter
+from openpyxl.utils import get_column_letter
 
 CPU_THRESHOLD = 80.0
 DISK_THRESHOLD = 80.0
@@ -122,30 +122,6 @@ def set_left_result_cell(ws, cell_ref, value):
     cell = set_cell_alignment(ws, cell_ref, "left")
     cell.value = value
     auto_adjust_row_height(ws, cell_ref, value)
-
-
-def copy_cell_style(ws, source_ref, target_ref):
-    source = ws[source_ref]
-    target = ws[target_ref]
-    target._style = copy(source._style)
-    target.font = copy(source.font)
-    target.fill = copy(source.fill)
-    target.border = copy(source.border)
-    target.alignment = copy(source.alignment)
-    target.number_format = source.number_format
-    target.protection = copy(source.protection)
-
-
-def copy_column_width(ws, source_col_idx, target_col_idx):
-    source_letter = get_column_letter(source_col_idx)
-    target_letter = get_column_letter(target_col_idx)
-    source_dim = ws.column_dimensions[source_letter]
-    target_dim = ws.column_dimensions[target_letter]
-    target_dim.width = source_dim.width
-    target_dim.hidden = source_dim.hidden
-    target_dim.bestFit = source_dim.bestFit
-    target_dim.outlineLevel = source_dim.outlineLevel
-    target_dim.collapsed = source_dim.collapsed
 
 
 def find_first(lines, prefix):
@@ -360,26 +336,8 @@ def write_disk_section(ws, disk_rows, row_map):
 
 
 def write_process_table(ws, table_config, process_rows):
-    start_col = column_index_from_string(table_config["start_col"])
-    service_row = table_config["service_row"]
-    status_row = table_config["status_row"]
-    base_columns = table_config["base_columns"]
-    total_columns = max(base_columns, len(process_rows))
-
-    service_cells = [f"{get_column_letter(start_col + index)}{service_row}" for index in range(total_columns)]
-    status_cells = [f"{get_column_letter(start_col + index)}{status_row}" for index in range(total_columns)]
-    service_style_source = table_config.get("service_style_source") or f"{get_column_letter(start_col)}{service_row}"
-    status_style_source = table_config.get("status_style_source") or f"{get_column_letter(start_col)}{status_row}"
-    width_source_start = table_config.get("width_source_start_col", start_col)
-
-    for index, target_ref in enumerate(service_cells):
-        source_col_idx = width_source_start + min(index, base_columns - 1)
-        target_col_idx = start_col + index
-        copy_column_width(ws, source_col_idx, target_col_idx)
-        copy_cell_style(ws, service_style_source, target_ref)
-
-    for index, target_ref in enumerate(status_cells):
-        copy_cell_style(ws, status_style_source, target_ref)
+    service_cells = table_config["service_cells"]
+    status_cells = table_config["status_cells"]
 
     if process_rows:
         for index, service_cell in enumerate(service_cells):
@@ -467,13 +425,8 @@ def main():
         "login": "A127",
         "login_next_row": 135,
         "process_table": {
-            "start_col": "B",
-            "service_row": 152,
-            "status_row": 153,
-            "base_columns": 6,
-            "service_style_source": "B152",
-            "status_style_source": "B153",
-            "width_source_start_col": 2,
+            "service_cells": ["B152", "C152", "D152", "E152", "F152", "G152"],
+            "status_cells": ["B153", "C153", "D153", "E153", "F153", "G153"],
         },
     }
 
@@ -491,13 +444,8 @@ def main():
         "login": "A136",
         "login_next_row": 144,
         "process_table": {
-            "start_col": "B",
-            "service_row": 155,
-            "status_row": 156,
-            "base_columns": 6,
-            "service_style_source": "E155",
-            "status_style_source": "E156",
-            "width_source_start_col": 2,
+            "service_cells": ["B155", "C155", "D155", "E155", "F155", "G155"],
+            "status_cells": ["B156", "C156", "D156", "E156", "F156", "G156"],
         },
     }
 
