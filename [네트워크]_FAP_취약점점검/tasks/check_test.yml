@@ -6,7 +6,7 @@
       data_list: []
 
 - name: 스크립트 파일 존재 확인
-  raw: "ls -al /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330.zip"
+  raw: "ls -al /fap/ansible/projects/[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330.zip"
   register: file_check
 
 - name: 스크립트 명령어 확인
@@ -14,7 +14,7 @@
     var: sh_check_list
 
 - name: 스크립트 파일 실행
-  raw: "cd /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330 && sh {{ item }}"
+  raw: "cd /fap/ansible/projects/[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330 && sh {{ item }}"
   failed_when: false
   register: script_active
   loop: "{{ sh_check_list }}"

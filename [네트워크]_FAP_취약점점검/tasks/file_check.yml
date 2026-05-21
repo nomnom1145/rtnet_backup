@@ -2,7 +2,7 @@
 ---
 - name: 패치 파일 존재 여부 확인
   raw: |
-    ls -al /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330.zip
+    ls -al /fap/ansible/projects/[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330.zip
   register: patch_file_check
   failed_when: false
 
@@ -14,7 +14,7 @@
 
 - name: 압축 해제 디렉터리 존재 여부 확인
   raw: |
-    ls -al /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330
+    ls -al /fap/ansible/projects/[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330
   register: unzip_dir_check
   failed_when: false
 
@@ -26,7 +26,7 @@
 
 - name: 파일 압축 해제
   raw: >
-    cd /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/ &&
+    cd /fap/ansible/projects/[네트워크]_FAP_취약점점검/templates/ &&
     zip_file="PATCH_SCRIPTS_20260330.zip" &&
     mkdir -p "${zip_file%.zip}" &&
     unzip -o "$zip_file" -d "${zip_file%.zip}"

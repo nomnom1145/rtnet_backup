@@ -17,8 +17,8 @@ except ImportError as exc:
     )
     raise
 
-
-TEMPLATE_PATH = "/fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/check_templates_260428.xlsx"
+## 프로젝트명 변경시 수정할 곳
+TEMPLATE_PATH = "/fap/ansible/projects/[네트워크]_FAP_취약점점검/templates/check_templates_260428.xlsx"
 DEFAULT_OUTPUT_DIR = "/fap/report/취약점_점검"
 
 SHEET_NAME = "Sheet1"
