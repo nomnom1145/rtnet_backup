@@ -1,0 +1,81 @@
+---
+- name: 3. 인벤토리 현황 트리구조 출력 확인 (현재 등록된 호스트 수)
+  raw: "printf 'select count(*) from host_info where is_deleted = 0 and is_enable = 1 and business_type_id in (10, 11);' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: web_ui_result
+  ignore_errors: false
+
+# - name: 3. 현재 등록된 호스트 수 결과 출력
+#   debug:
+#     msg: |
+#       WEB UI 상태 확인 결과
+
+#       등록 호스트 수 : {{ web_ui_result.stdout | trim }}
+
+################################################################################################
+
+- name: 5. 조직/팀/사용자 관리 메뉴 확인 (현재 등록된 사용자 수)
+  raw: "printf 'select count(*) from user_info where is_enable = 1 and is_deleted = 0;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: user_count_result
+  ignore_errors: false
+
+# - name: 5. 현재 등록된 사용자 수 결과 출력
+#   debug:
+#     msg: |
+#       사용자 수 확인 결과
+
+#       사용자 수 : {{ user_count_result.stdout | trim }}
+
+################################################################################################
+
+- name: 6. 스케쥴 설정 메뉴 확인 (현재 등록된 스케쥴 수)
+  raw: "printf 'select count(*) from schedule_info;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: schedule_count_result
+  ignore_errors: false
+
+# - name: 6. 현재 등록된 스케쥴 수 결과 출력
+#   debug:
+#     msg: |
+#       점검 스케줄 수 확인 결과
+      
+#       스케줄 수 : {{ schedule_count_result.stdout | trim }}
+
+################################################################################################
+
+- name: 7. 통보 설정 메뉴 확인 (현재 등록된 통보 수)
+  raw: "printf 'select count(*) from notification_info;' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: notification_count_result
+  ignore_errors: false
+
+# - name: 7. 현재 등록된 통보 수 결과 출력
+#   debug:
+#     msg: |
+#       통보설정 수 확인 결과
+
+#       통보설정 수 : {{ notification_count_result.stdout | trim }}
+
+################################################################################################
+
+- name: 8. 작업 템플릿 메뉴 확인 (현재 등록된 작업 템플릿 수)
+  raw: "printf 'select count(*) from template_info where is_enable = 1 and is_deleted = 0 and template_type = $$J$$ and not (execute_permission = $$T$$ and task_count is null);' | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: template_count_result
+  ignore_errors: false  
+
+# - name: 8. 현재 등록된 작업 템플릿 수 결과 출력
+#   debug:
+#     msg: |
+#       작업템플릿 수 확인 결과
+
+#       작업템플릿 수 : {{ template_count_result.stdout | trim }}
+
+################################################################################################
+
+- name: 13. SFTP 파일 메뉴 확인 (백업관리 SFTP 파일 목록)
+  raw: "printf \"select file_name || '    ' || to_char(create_time, 'YYYY-MM-DD HH24:MI:SS') from sftp_files where create_time >= date_trunc('month', current_date) and create_time < date_trunc('month', current_date) + interval '1 month' order by create_time desc, file_name;\" | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: sftp_file_result
+  ignore_errors: false
+
+# - name: 13. 백업관리 SFTP 파일 목록 결과 출력
+#   debug:
+#     msg: |
+#       백업관리 SFTP 파일 목록 확인 결과
+#       {{ sftp_file_result.stdout | replace('\\n', '\n') }}

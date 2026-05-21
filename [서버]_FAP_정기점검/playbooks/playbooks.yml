@@ -23,8 +23,19 @@
       register: check_task
       when: con_check.stdout is defined
 
-    - name: save to DB
-      include_tasks: "../tasks/save_to_db.yml"
+    # - name: save to DB
+    #   include_tasks: "../tasks/save_to_db.yml"
 
-    - name: 보고서 생성
-      include_tasks: "../tasks/make_report.yml"
+    - name: DR 모의훈련 작업 내역 반영
+      include_tasks: "../tasks/dr_mock_training_check.yml"
+      when: con_check.stdout is defined
+
+    # - name: 보고서 생성
+    #   include_tasks: "../tasks/make_report.yml"
+
+    # - name: 플레이북 백업
+    #   raw: |
+    #     cd /app/fap/ansible
+    #     sh exec_backup_projects.sh
+    #   register: projects_backup
+    #   delegate_to: localhost

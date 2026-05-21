@@ -1,1 +1,52 @@
-(NULL)
+---
+data_type: report
+data_key: server
+system: linux
+report_type: periodic_server_check
+today: "{{ lookup('pipe', 'python3 -c \"from datetime import datetime, timezone, timedelta; print(datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9))).strftime(\\\"%Y%m%d\\\"))\"') }}"
+report_job_id: "{{ fap.job_id | default(fap_job_id | default('manual')) }}"
+file_path: "/fap/report/{{ report_type }}/{{ today }}/{{ report_job_id }}"
+
+### 입력 받아야 하는 변수
+first_ip: "{{ FIRST_IP | default('') }}"
+second_ip: "{{ SECOND_IP | default('') }}"
+first_name: "{{ FIRST_NAME | default('') }}"
+second_name: "{{ SECOND_NAME | default('') }}"
+special_note: "{{ SPECIAL_NOTE | default('') }}"
+
+job_info:
+  file_path: "{{ file_path }}"
+
+### 변동 사항이 있을경우 입력이 필요합니다.
+# 2. 패치 관리 항목 점검 내용
+
+# 입력 순서 참고
+
+# 패치 예정 : 
+# 취약점 : 
+# 비고 :
+
+os_patch_day_test: 미정
+os_vulnerability_test: 없습니다.
+os_note_test: 없습니다.
+
+db_patch_day_test: 미정
+db_vulnerability_test: 없습니다
+db_note_test: 없습니다.
+
+fap_patch_day_test: 미정
+fap_vulnerability_test: 없습니다
+fap_note_test: 없습니다.
+
+
+
+# 9. 작업 관리 (맨먼스 산정)
+# 당월 진행 내역
+current_month_work_management:
+  - "Ansible 플레이북 수정"
+  - "Alteon 점검 자동화 테스트"
+
+# 이후 진행 예정
+next_work_management:
+  - "운영 배포 검증"
+  - "에러 처리 로직 추가"

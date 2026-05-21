@@ -1,0 +1,15 @@
+---
+- name: DR 모의훈련 보고서 출력 경로 준비
+  raw: "mkdir -p {{ file_path }}"
+  ignore_errors: false
+
+- name: DR 모의훈련 작업 내역 반영 보고서 생성
+  raw: >-
+    python3.12 /fap/ansible/projects/[서버]_FAP_정기점검/vars/fill_dr_mock_training_section.py
+    {{ file_path }}/server_report_form_filled.xlsx
+  register: dr_mock_training_report_result
+  ignore_errors: false
+
+- name: DR 모의훈련 작업 내역 보고서 생성 결과 출력
+  debug:
+    msg: "{{ dr_mock_training_report_result.stdout | trim }}"

@@ -1,0 +1,65 @@
+---
+- name: OS 버전 확인
+  raw: echo "Red Hat $(grep -oE '[0-9]+\.[0-9]+' /etc/redhat-release)"
+  register: os_version
+
+- name: 디버그
+  debug:
+    var: os_version.stdout
+
+- name: PostgreSQL 버전 확인
+  shell: |
+    docker exec -e PGPASSWORD='rt12345%' pg-0 \
+    psql -U nds -d fap -t -A -c "SELECT version();" \
+    | awk '{print $1, $2}'
+  register: postgres_version
+  changed_when: false
+
+- name: 디버그
+  debug:
+    var: postgres_version.stdout
+
+
+- name: FAP 버전 확인
+  raw: awk -F= '/^fap.version=/{gsub(/ /,"",$2); print $2}' /fap/tomcat/deploy/deploy.properties
+  register: fap_version
+
+- name: 디버그
+  debug:
+    var: fap_version.stdout
+
+- name: redis 버전 확인
+  raw: docker exec redis-0 redis-server --version | grep -oP 'v=\K[0-9.]+'
+  register: redis_version
+  changed_when: false
+
+- name: 디버그
+  debug:
+    var: redis_version.stdout
+
+- name: docker 버전 확인
+  raw: docker --version | grep -oP '[0-9]+\.[0-9]+\.[0-9]+'
+  register: docker_version
+  changed_when: false
+
+- name: 디버그
+  debug:
+    var: docker_version.stdout
+
+- name: tomcat 버전 확인
+  raw: docker exec fap-web catalina.sh version 2>/dev/null | grep 'Server version' | grep -oP '[0-9]+\.[0-9]+\.[0-9]+'
+  register: tomcat_version
+  changed_when: false
+
+- name: 디버그
+  debug:
+    var: tomcat_version.stdout
+
+- name: ansible core 버전 확인
+  raw: ansible --version | head -1 | grep -oP 'core \K[0-9.]+'
+  register: ansible_core_version
+  changed_when: false
+
+- name: 디버그
+  debug:
+    var: ansible_core_version.stdout

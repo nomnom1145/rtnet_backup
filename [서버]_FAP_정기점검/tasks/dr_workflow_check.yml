@@ -1,0 +1,28 @@
+---
+- name: 8-1. DR 모의훈련 워크플로우 수량 점검
+  raw: "printf \"select count(distinct ti.template_id) from template_info ti where ti.is_deleted = 0 and ti.template_type = 'W' and ti.job_type = 'AS' and exists (select 1 from template_workflow_node n where n.template_id = ti.template_id);\" | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: dr_mock_count_result
+  ignore_errors: false
+
+- name: 8-2. DR 실전환 워크플로우 수량 점검
+  raw: "printf \"select count(distinct ti.template_id) from template_info ti where ti.is_deleted = 0 and ti.template_type = 'W' and ti.job_type = 'AD' and exists (select 1 from template_workflow_node n where n.template_id = ti.template_id);\" | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: dr_cutover_count_result
+  ignore_errors: false
+
+- name: 8-3. DR IP 수동전환 워크플로우 수량 점검
+  raw: "printf \"select count(distinct ti.template_id) from template_info ti where ti.is_deleted = 0 and ti.template_type = 'W' and replace(replace(ti.template_name, ' ', ''), '_', '') like '%%수동전환%%' and exists (select 1 from template_workflow_node n where n.template_id = ti.template_id);\" | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: dr_manual_ip_count_result
+  ignore_errors: false
+
+- name: 8-4. DR 워크플로우 수량 정리
+  set_fact:
+    dr_mock_count: "{{ (dr_mock_count_result.stdout | regex_search('[0-9]+')) | default('0', true) }}"
+    dr_cutover_count: "{{ (dr_cutover_count_result.stdout | regex_search('[0-9]+')) | default('0', true) }}"
+    dr_manual_ip_count: "{{ (dr_manual_ip_count_result.stdout | regex_search('[0-9]+')) | default('0', true) }}"
+
+- name: 8. DR 워크플로우 수량 점검 결과 출력
+  debug:
+    msg:
+      - "모의훈련 {{ dr_mock_count }}개"
+      - "DR 전환 {{ dr_cutover_count }}개"
+      - "IP 수동전환 {{ dr_manual_ip_count }}개"

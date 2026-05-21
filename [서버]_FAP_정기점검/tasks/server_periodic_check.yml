@@ -1,3 +1,100 @@
 ---
-- name: server_periodic_check
-  hosts: all
+- name: 서버 현황
+  include_tasks: "../tasks/version_check.yml"
+
+################################################################################################
+
+- name: 1. CPU, 디스크, 메모리 사용률 점검
+  include_tasks: "../tasks/cpu_disck_mem_check.yml"
+
+################################################################################################
+
+- name: 2. 패치 관리 항목 점검
+  set_fact:
+    os_patch_day: "{{ os_patch_day_test }}"
+    os_vulnerability: "{{ os_vulnerability_test }}"
+    os_note: "{{ os_note_test }}"
+
+    db_patch_day: "{{ db_patch_day_test }}"
+    db_vulnerability: "{{ db_vulnerability_test }}"
+    db_note: "{{ db_note_test }}"
+
+    fap_patch_day: "{{ fap_patch_day_test }}"
+    fap_vulnerability: "{{ fap_vulnerability_test }}"
+    fap_note: "{{ fap_note_test }}"
+
+  register: patch_day_vulnerability
+  ignore_errors: false
+
+
+- name: 2.패치 관리 항목 점검 결과 출력
+  debug:
+    msg: |
+      "OS 패치 예정일 : {{ os_patch_day_test }}"
+      "OS 취약점 내역 : {{ os_vulnerability_test }}"
+
+      "DB" 패치 예정일 : {{ db_patch_day_test }}"
+      "DB 취약점 내역 : {{ db_vulnerability_test }}"
+
+      "FAP 패치 예정일 : {{ fap_patch_day_test }}"
+      "FAP 취약점 내역 : {{ fap_vulnerability_test }}"
+
+################################################################################################
+
+- name: 3. 자동화 서버 관련 프로세스 가동 점검
+  raw: |
+    printf "%-20s %-30s\n" "NAME" "STATUS"
+
+    docker ps -a --format '{% raw %}{{.Names}}|{{.Status}}{% endraw %}' | while IFS='|' read -r name status
+    do
+      printf "%-20s %-30s\n" "$name" "$status"
+    done
+  register: process_result
+  ignore_errors: false
+
+- name: 4-가 서버/WEB/DB 프로세스 기동 상태 결과 출력
+  debug:
+    msg: |
+      {{ process_result.stdout | trim }}
+
+################################################################################################
+
+- name: 4. 자동화 서버 웹 UI 서비스 상태 점검
+  include_tasks: "../tasks/ui_service_check.yml"
+
+###############################################################################################
+
+- name: 5. 사용자 계정 현황 점검
+  include_tasks: "../tasks/ui_user_check.yml"
+
+##############################################################################################
+
+- name: 6. 자동화 템플릿 점검 #작업 템플릿 당월/전월 생성 수 비교
+  include_tasks: "../tasks/template_check.yml"
+
+###############################################################################################
+
+- name: 7. 웹 접속 IP 점검
+  include_tasks: "../tasks/ui_web_ip_check.yml"
+
+###############################################################################################
+
+- name: 8. DR 워크플로우 점검
+  include_tasks: "../tasks/dr_workflow_check.yml"
+
+###############################################################################################
+
+# 수동 입력 필요 #
+- name: 9. 작업 관리 # (맨먼스 산정) 
+  set_fact:
+    previous_work_management: "{{ current_month_work_management }}" # 당월 진행 내역
+    current_work_management: "{{ next_work_management }}" # 이후 진행 예정
+  register: work_management_result
+  ignore_errors: false
+
+###############################################################################################
+
+- name: 10. DR 모의훈련 작업 내역
+  include_tasks: "../tasks/dr_mock_training_check.yml"
+
+###############################################################################################

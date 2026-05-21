@@ -1,0 +1,50 @@
+---
+# 참고:
+# 이 로직은 "매달 1회 실행"을 기준으로 전월/당월 수량을 비교하기 위한 방식입니다.
+# 동작 방식:
+# 1. 직전 실행 때 저장해둔 current 값을 previous 로 복사
+# 2. 이번 실행 시점의 실제 템플릿 수량을 DB에서 다시 조회
+# 3. 새로 조회한 값을 current 에 저장
+#
+# 따라서 의미는 아래와 같습니다.
+# - previous_template_count.txt : 직전 실행 시점의 수량
+# - current_template_count.txt  : 이번 실행 시점의 수량
+#
+# 주의:
+# 같은 달에 여러 번 실행하면 "전월 수량"이 아니라 "직전 실행 수량"이 됩니다.
+# 그래서 월간 비교 용도로 쓰려면 매달 1회 정기 실행하는 것이 가장 적절합니다.
+
+- name: 작업 템플릿 수량 파일 경로 정의
+  set_fact:
+    previous_template_count_file: "/fap/ansible/projects/[서버]_FAP_정기점검/roles/previous_template_count.txt"
+    current_template_count_file: "/fap/ansible/projects/[서버]_FAP_정기점검/roles/current_template_count.txt"
+
+- name: 전월 수량 파일이 없으면 0으로 생성
+  raw: "if [ ! -f {{ previous_template_count_file }} ]; then printf '0' > {{ previous_template_count_file }}; fi"
+  ignore_errors: false
+
+- name: 이전 당월 수량을 전월 수량 파일로 복사
+  raw: "if [ -f {{ current_template_count_file }} ]; then cp {{ current_template_count_file }} {{ previous_template_count_file }}; fi"
+  ignore_errors: false
+
+- name: 전월 수량 읽기
+  raw: "cat {{ previous_template_count_file }}"
+  register: previous_template_count_result
+  ignore_errors: false
+
+- name: 현재 활성 작업 템플릿 수량 조회
+  raw: "printf \"select count(*) from template_info where is_enable = 1 and is_deleted = 0;\" | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
+  register: current_template_count_result
+  ignore_errors: false
+
+- name: 당월 수량 저장
+  raw: "printf \"%s\" \"{{ current_template_count_result.stdout | trim }}\" > {{ current_template_count_file }}"
+  ignore_errors: false
+
+- name: 작업 템플릿 수량 비교 결과 출력
+  debug:
+    msg: |
+      작업 템플릿 수량 점검 결과
+
+      전월 수량: {{ previous_template_count_result.stdout | trim }}
+      당월 수량: {{ current_template_count_result.stdout | trim }}

@@ -1,0 +1,75 @@
+---
+- name: 1-가 CPU 사용량 점검
+  raw: |
+    count=0
+
+    while [ $count -lt 10 ]
+    do
+        cpu=$(top -bn1 | awk -F',' '/^%Cpu/ {print $1}')
+
+        if ! echo "$cpu" | grep -q "0.0 us"; then
+            echo "$cpu"
+            exit 0
+        fi
+
+        count=$((count + 1))
+        sleep 1
+    done
+
+    echo "CPU usage still 0.0 us"
+    exit 1
+  register: cpu_usage
+  ignore_errors: false
+
+- name: 1-가 CPU 사용량 결과 출력
+  debug:
+    msg: "사용량 : {{ cpu_usage.stdout }}"
+
+################################################################################################
+
+- name: 1-나 디스크 사용률 점검
+  raw: |
+    mount_points=("/" "/home" "/data")
+
+    for mount_point in "${mount_points[@]}"
+    do
+        disk_info=$(df -hP "$mount_point" 2>/dev/null | awk 'NR==2')
+
+        if [ -z "$disk_info" ]; then
+            echo "[FAIL] ${mount_point} mount point not found"
+            continue
+        fi
+
+        filesystem=$(echo "$disk_info" | awk '{print $1}')
+        size=$(echo "$disk_info" | awk '{print $2}')
+        used=$(echo "$disk_info" | awk '{print $3}')
+        avail=$(echo "$disk_info" | awk '{print $4}')
+        use_per=$(echo "$disk_info" | awk '{print $5}')
+        mounted_on=$(echo "$disk_info" | awk '{print $6}')
+
+        echo "Mount=${mounted_on} || Size=${size} || Used=${used} || Use=${use_per}"
+    done
+  register: disk_result
+  ignore_errors: false
+
+- name: 1-나 디스크 사용률 결과 출력
+  debug:
+    msg: "{{ disk_result.stdout_lines }}"
+
+################################################################################################
+
+- name: 1-다 메모리 사용률 점검
+  raw: |
+    mem_info=$(free -m | awk 'NR==2')
+    total=$(echo "$mem_info" | awk '{print $2}')
+    used=$(echo "$mem_info" | awk '{print $3}')
+    free=$(echo "$mem_info" | awk '{print $4}')
+    use_per=$(echo "$mem_info" | awk '{print $3/$2 * 100}')
+
+    echo "Total=${total}MB || Used=${used}MB "
+  register: mem_result
+  ignore_errors: false
+
+- name: 1-다 메모리 사용률 결과 출력
+  debug:
+    msg: "{{ mem_result.stdout }}"

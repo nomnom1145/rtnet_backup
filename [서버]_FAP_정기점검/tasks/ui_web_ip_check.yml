@@ -1,0 +1,48 @@
+---
+- name: 7. 웹 접속 IP 점검
+  raw: |
+    printf "
+    SELECT
+        CASE
+            WHEN ip_type = 'ACS' THEN '시스템 접속 허용 IP'
+            WHEN ip_type = 'EXE' THEN '작업 실행 허용 IP'
+            ELSE ip_type
+        END AS \"구분\",
+
+        CASE
+            WHEN is_range = 1 THEN '체크'
+            ELSE ''
+        END AS \"IP 대역\",
+
+        start_ip AS \"시작(허용) IP\",
+
+        end_ip AS \"종료 IP\",
+
+        CASE
+            WHEN user_type = 'ADMIN' THEN '시스템 관리자'
+            WHEN user_type = 'ALL' THEN '전체'
+            ELSE user_type
+        END AS \"적용 권한\"
+
+    FROM
+        ip_management_whitelist
+    ORDER BY
+        CASE
+            WHEN ip_type = 'ACS' THEN 1
+            WHEN ip_type = 'EXE' THEN 2
+            ELSE 9
+        END,
+        ip_id;
+    " | docker exec -i -e PGPASSWORD='rt12345%' pg-0 \
+    psql -U nds -d fap -At -F '|'
+  register: web_access_ip_result
+  ignore_errors: false
+
+- name: 7. 웹 접속 IP 점검 결과 출력
+  debug:
+    msg: |
+      7. 웹 접속 IP 점검
+
+      {% for line in web_access_ip_result.stdout_lines %}
+      {{ line }}
+      {% endfor %}
