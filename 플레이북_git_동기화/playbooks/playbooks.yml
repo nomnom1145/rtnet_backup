@@ -1,5 +1,5 @@
 ---
-- name: Git 동기화 결과를 메일로 전송
+- name: Git 동기화 결과를 메일로 전송 자동화
   hosts: all
   gather_facts: false
 
