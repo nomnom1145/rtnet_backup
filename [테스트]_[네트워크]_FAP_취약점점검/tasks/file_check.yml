@@ -1,0 +1,54 @@
+### 취약점 점검/조치에 사용할 스크립트 파일 압축 파일 여부 확인 및 압축 해제를 하는 task 입니다.
+---
+- name: 패치 파일 존재 여부 확인
+  raw: |
+    ls -al /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330.zip
+  register: patch_file_check
+  failed_when: false
+
+- name: 패치 파일 확인 결과 출력
+  debug:
+    msg: |
+      패치 파일 확인 결과
+      {{ patch_file_check.stdout }}
+
+- name: 압축 해제 디렉터리 존재 여부 확인
+  raw: |
+    ls -al /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330
+  register: unzip_dir_check
+  failed_when: false
+
+- name: 압축 해제 디렉터리 확인 결과 출력
+  debug:
+    msg: |
+      압축 해제 디렉터리 확인 결과
+      {{ unzip_dir_check.stdout }}
+
+- name: 파일 압축 해제
+  raw: >
+    cd /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/ &&
+    zip_file="PATCH_SCRIPTS_20260330.zip" &&
+    mkdir -p "${zip_file%.zip}" &&
+    unzip -o "$zip_file" -d "${zip_file%.zip}"
+  register: unzip_test
+  when:
+    - patch_file_check.rc == 0
+    - unzip_dir_check.rc != 0
+
+- name: 압축 해제 결과 출력
+  debug:
+    msg: |
+      압축 해제 완료
+      {{ unzip_test.stdout }}
+  when:
+    - unzip_test is defined
+    - unzip_test.stdout is defined
+
+- name: 압축 해제 스킵 안내
+  debug:
+    msg: |
+      이미 압축 해제 디렉터리가 존재하여 압축 해제를 진행하지 않았습니다.
+      확인된 디렉터리:
+      {{ unzip_dir_check.stdout }}
+  when:
+    - unzip_dir_check.rc == 0

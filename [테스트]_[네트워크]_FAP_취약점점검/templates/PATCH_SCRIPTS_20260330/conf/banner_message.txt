@@ -1,0 +1,8 @@
+============================================================
+  WARNING: AUTHORIZED USERS ONLY
+============================================================
+  This system is restricted to authorized use only.
+  Unauthorized access or use is prohibited.
+  Activities may be monitored, logged, and audited.
+  By continuing, you acknowledge and consent to monitoring.
+============================================================

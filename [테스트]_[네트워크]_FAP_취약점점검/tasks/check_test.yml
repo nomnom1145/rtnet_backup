@@ -1,0 +1,54 @@
+### 취약점 점검 스크립트를 실행하는 task 입니다.
+---
+- name: 결과 취합 변수 초기화
+  set_fact:
+    content:
+      data_list: []
+
+- name: 스크립트 파일 존재 확인
+  raw: "ls -al /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330.zip"
+  register: file_check
+
+- name: 스크립트 명령어 확인
+  debug:
+    var: sh_check_list
+
+- name: 스크립트 파일 실행
+  raw: "cd /fap/ansible/projects/[테스트]_[네트워크]_FAP_취약점점검/templates/PATCH_SCRIPTS_20260330 && sh {{ item }}"
+  failed_when: false
+  register: script_active
+  loop: "{{ sh_check_list }}"
+  loop_control:
+    label: "Raw 실행 파일: {{ item }}"
+
+# - name: 실행 결과 확인 (디버그)
+#   debug:
+#     # 각 루프 결과의 stdout을 출력합니다.
+#     msg: "{{ item.stdout_lines }}"
+#   loop: "{{ script_active.results }}"
+
+- name: 스크립트 실행 결과 취합
+  set_fact:
+    content:
+      data_list: "{{ content.data_list + [ {
+        'host_name': inventory_hostname,
+        'cmd_id': script_idx + 1,
+        'cmd_name': item.item,
+        'cmd': item.item,
+        'output': (((item.stdout | default(item.stdout_lines | default([]) | join('\n'))) | string)[:5000]),
+        'message': (((item.stderr | default(item.stderr_lines | default([]) | join('\n'))) | string)[:2000]),
+        'os': system,
+        'file_path': '/fap/report/취약점_점검',
+        'report_type': report,
+        'system': system,
+        'rc': item.rc | default(-1),
+        'data1': item.rc | default(-1),
+        'data2': script_idx + 1,
+        'data3': item.item,
+        'is_success': (item.rc | default(1)) == 0,
+        'is_pass': (0 if '[FAIL]' in (((item.stdout | default(item.stdout_lines | default([]) | join('\n'))) | string) | upper) else (1 if (item.rc | default(1)) == 0 else 0))
+        } ] }}"
+  loop: "{{ script_active.results }}"
+  loop_control:
+    index_var: script_idx
+    label: "{{ item.item }}"
