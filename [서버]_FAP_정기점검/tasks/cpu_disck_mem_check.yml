@@ -29,25 +29,23 @@
 
 - name: 1-나 디스크 사용률 점검
   raw: |
-    mount_points=("/" "/home" "/data")
+    mount_points=("/" "/app" "/data")
 
     for mount_point in "${mount_points[@]}"
     do
         disk_info=$(df -hP "$mount_point" 2>/dev/null | awk 'NR==2')
 
         if [ -z "$disk_info" ]; then
-            echo "[FAIL] ${mount_point} mount point not found"
+            echo "Mount=${mount_point} || Size=없음 || Used=없음 || Use=없음 || Status=NOT_FOUND"
             continue
         fi
 
-        filesystem=$(echo "$disk_info" | awk '{print $1}')
         size=$(echo "$disk_info" | awk '{print $2}')
         used=$(echo "$disk_info" | awk '{print $3}')
-        avail=$(echo "$disk_info" | awk '{print $4}')
         use_per=$(echo "$disk_info" | awk '{print $5}')
         mounted_on=$(echo "$disk_info" | awk '{print $6}')
 
-        echo "Mount=${mounted_on} || Size=${size} || Used=${used} || Use=${use_per}"
+        echo "Mount=${mount_point} || Size=${size} || Used=${used} || Use=${use_per} || ActualMount=${mounted_on}"
     done
   register: disk_result
   ignore_errors: false

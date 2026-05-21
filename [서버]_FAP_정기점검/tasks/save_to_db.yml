@@ -1,3 +1,305 @@
 ---
-- name: save_to_db
-  hosts: all
+- name: Initialize merged rows
+  set_fact:
+    merged: []
+
+- name: Build command-based periodic check rows
+  set_fact:
+    merged: "{{ (merged | default([])) + [check_row] }}"
+  loop:
+    - { cmd_id: '1a', cmd_name: 'CPU usage check', result_var: 'cpu_usage' }
+    - { cmd_id: '1b', cmd_name: 'Disk usage check', result_var: 'disk_result' }
+    - { cmd_id: '1c', cmd_name: 'Memory usage check', result_var: 'mem_result' }
+    - { cmd_id: '3', cmd_name: 'Process status check', result_var: 'process_result' }
+    - { cmd_id: '4a', cmd_name: 'Web UI host count check', result_var: 'web_ui_result' }
+    - { cmd_id: '4b', cmd_name: 'User menu count check', result_var: 'user_count_result' }
+    - { cmd_id: '4c', cmd_name: 'Schedule menu count check', result_var: 'schedule_count_result' }
+    - { cmd_id: '4d', cmd_name: 'Notification menu count check', result_var: 'notification_count_result' }
+    - { cmd_id: '4e', cmd_name: 'Template menu count check', result_var: 'template_count_result' }
+    - { cmd_id: '4f', cmd_name: 'SFTP file menu check', result_var: 'sftp_file_result' }
+    - { cmd_id: '5', cmd_name: 'User account status check', result_var: 'user_account_status_result' }
+    - { cmd_id: '6a', cmd_name: 'Previous template count check', result_var: 'previous_template_count_result' }
+    - { cmd_id: '6b', cmd_name: 'Current template count check', result_var: 'current_template_count_result' }
+    - { cmd_id: '7', cmd_name: 'Web access IP check', result_var: 'web_access_ip_result' }
+  vars:
+    result_ref: "{{ vars[item.result_var] | default({}) }}"
+    stdout_lines_clean: "{{ result_ref.stdout_lines | default([], true) | reject('equalto', '') | list }}"
+    output_text: >-
+      {{
+        (stdout_lines_clean | join('\n') | trim)
+        if (stdout_lines_clean | length) > 0
+        else (result_ref.stdout | default('') | trim)
+      }}
+    message_text: "{{ (result_ref.stderr | default(result_ref.msg) | default('')) | trim }}"
+    upper_output_text: "{{ (output_text | string) | upper }}"
+    success_value: "{{ 1 if (result_ref.rc | default(1) | int) == 0 else 0 }}"
+    pass_value: >-
+      {%- if '[FAIL]' in upper_output_text -%}
+      0
+      {%- elif (result_ref.rc | default(1) | int) == 0 -%}
+      1
+      {%- else -%}
+      0
+      {%- endif -%}
+    check_row:
+      cmd_id: "{{ item.cmd_id }}"
+      name: "{{ item.cmd_name }}"
+      cmd_name: "{{ item.cmd_name }}"
+      cmd: "{{ item.cmd_name }}"
+      host: "{{ fap.host_ip | default(inventory_hostname) }}"
+      host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+      hostname: "{{ inventory_hostname }}"
+      ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+      system: "{{ system | default('linux') }}"
+      report_type: "{{ report_type | default('periodic_server_check') }}"
+      file_path: "{{ file_path | default('') }}"
+      data_key: "{{ data_key | default('server') }}"
+      output: "{{ output_text }}"
+      result: "{{ output_text }}"
+      message: "{{ message_text }}"
+      failure_reason: "{{ message_text }}"
+      is_success: "{{ success_value | int }}"
+      is_pass: "{{ pass_value | int }}"
+      check_result: "{{ 'PASS' if (pass_value | int) == 1 else 'FAIL' }}"
+      status: "{{ 'SUCCESS' if (success_value | int) == 1 else 'FAILED' }}"
+
+- name: Append patch management rows
+  set_fact:
+    merged: "{{ merged + patch_rows }}"
+  vars:
+    patch_rows:
+      - cmd_id: '2a'
+        name: 'OS patch management check'
+        cmd_name: 'OS patch management check'
+        cmd: 'OS patch management check'
+        host: "{{ fap.host_ip | default(inventory_hostname) }}"
+        host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+        hostname: "{{ inventory_hostname }}"
+        ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+        system: "{{ system | default('linux') }}"
+        report_type: "{{ report_type | default('periodic_server_check') }}"
+        file_path: "{{ file_path | default('') }}"
+        data_key: "{{ data_key | default('server') }}"
+        output: "patch_day={{ os_patch_day | default('') }}, vulnerability={{ os_vulnerability | default('') }}, note={{ os_note | default('') }}"
+        result: "patch_day={{ os_patch_day | default('') }}, vulnerability={{ os_vulnerability | default('') }}, note={{ os_note | default('') }}"
+        message: ""
+        failure_reason: ""
+        is_success: 1
+        is_pass: "{{ 0 if '[FAIL]' in ((os_vulnerability | default('') | string) | upper) else 1 }}"
+        check_result: "{{ 'FAIL' if '[FAIL]' in ((os_vulnerability | default('') | string) | upper) else 'PASS' }}"
+        status: "SUCCESS"
+      - cmd_id: '2b'
+        name: 'DB patch management check'
+        cmd_name: 'DB patch management check'
+        cmd: 'DB patch management check'
+        host: "{{ fap.host_ip | default(inventory_hostname) }}"
+        host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+        hostname: "{{ inventory_hostname }}"
+        ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+        system: "{{ system | default('linux') }}"
+        report_type: "{{ report_type | default('periodic_server_check') }}"
+        file_path: "{{ file_path | default('') }}"
+        data_key: "{{ data_key | default('server') }}"
+        output: "patch_day={{ db_patch_day | default('') }}, vulnerability={{ db_vulnerability | default('') }}, note={{ db_note | default('') }}"
+        result: "patch_day={{ db_patch_day | default('') }}, vulnerability={{ db_vulnerability | default('') }}, note={{ db_note | default('') }}"
+        message: ""
+        failure_reason: ""
+        is_success: 1
+        is_pass: "{{ 0 if '[FAIL]' in ((db_vulnerability | default('') | string) | upper) else 1 }}"
+        check_result: "{{ 'FAIL' if '[FAIL]' in ((db_vulnerability | default('') | string) | upper) else 'PASS' }}"
+        status: "SUCCESS"
+      - cmd_id: '2c'
+        name: 'FAP patch management check'
+        cmd_name: 'FAP patch management check'
+        cmd: 'FAP patch management check'
+        host: "{{ fap.host_ip | default(inventory_hostname) }}"
+        host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+        hostname: "{{ inventory_hostname }}"
+        ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+        system: "{{ system | default('linux') }}"
+        report_type: "{{ report_type | default('periodic_server_check') }}"
+        file_path: "{{ file_path | default('') }}"
+        data_key: "{{ data_key | default('server') }}"
+        output: "patch_day={{ fap_patch_day | default('') }}, vulnerability={{ fap_vulnerability | default('') }}, note={{ fap_note | default('') }}"
+        result: "patch_day={{ fap_patch_day | default('') }}, vulnerability={{ fap_vulnerability | default('') }}, note={{ fap_note | default('') }}"
+        message: ""
+        failure_reason: ""
+        is_success: 1
+        is_pass: "{{ 0 if '[FAIL]' in ((fap_vulnerability | default('') | string) | upper) else 1 }}"
+        check_result: "{{ 'FAIL' if '[FAIL]' in ((fap_vulnerability | default('') | string) | upper) else 'PASS' }}"
+        status: "SUCCESS"
+
+- name: Append DR workflow rows
+  set_fact:
+    merged: "{{ merged + dr_workflow_rows }}"
+  vars:
+    dr_workflow_rows:
+      - cmd_id: '8a'
+        name: 'DR mock workflow count check'
+        cmd_name: 'DR mock workflow count check'
+        cmd: 'DR mock workflow count check'
+        host: "{{ fap.host_ip | default(inventory_hostname) }}"
+        host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+        hostname: "{{ inventory_hostname }}"
+        ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+        system: "{{ system | default('linux') }}"
+        report_type: "{{ report_type | default('periodic_server_check') }}"
+        file_path: "{{ file_path | default('') }}"
+        data_key: "{{ data_key | default('server') }}"
+        output: "{{ dr_mock_count | default('0') | string }}"
+        result: "{{ dr_mock_count | default('0') | string }}"
+        message: ""
+        failure_reason: ""
+        is_success: 1
+        is_pass: 1
+        check_result: "PASS"
+        status: "SUCCESS"
+      - cmd_id: '8b'
+        name: 'DR cutover workflow count check'
+        cmd_name: 'DR cutover workflow count check'
+        cmd: 'DR cutover workflow count check'
+        host: "{{ fap.host_ip | default(inventory_hostname) }}"
+        host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+        hostname: "{{ inventory_hostname }}"
+        ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+        system: "{{ system | default('linux') }}"
+        report_type: "{{ report_type | default('periodic_server_check') }}"
+        file_path: "{{ file_path | default('') }}"
+        data_key: "{{ data_key | default('server') }}"
+        output: "{{ dr_cutover_count | default('0') | string }}"
+        result: "{{ dr_cutover_count | default('0') | string }}"
+        message: ""
+        failure_reason: ""
+        is_success: 1
+        is_pass: 1
+        check_result: "PASS"
+        status: "SUCCESS"
+      - cmd_id: '8c'
+        name: 'DR manual IP workflow count check'
+        cmd_name: 'DR manual IP workflow count check'
+        cmd: 'DR manual IP workflow count check'
+        host: "{{ fap.host_ip | default(inventory_hostname) }}"
+        host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+        hostname: "{{ inventory_hostname }}"
+        ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+        system: "{{ system | default('linux') }}"
+        report_type: "{{ report_type | default('periodic_server_check') }}"
+        file_path: "{{ file_path | default('') }}"
+        data_key: "{{ data_key | default('server') }}"
+        output: "{{ dr_manual_ip_count | default('0') | string }}"
+        result: "{{ dr_manual_ip_count | default('0') | string }}"
+        message: ""
+        failure_reason: ""
+        is_success: 1
+        is_pass: 1
+        check_result: "PASS"
+        status: "SUCCESS"
+
+- name: Append work management rows
+  set_fact:
+    merged: "{{ merged + work_management_rows }}"
+  vars:
+    previous_work_management_text: >-
+      {{
+        (previous_work_management | default([], true) | join('\n'))
+        if (previous_work_management | default([], true)) is sequence and (previous_work_management | default([], true)) is not string
+        else (previous_work_management | default('') | string)
+      }}
+    current_work_management_text: >-
+      {{
+        (current_work_management | default([], true) | join('\n'))
+        if (current_work_management | default([], true)) is sequence and (current_work_management | default([], true)) is not string
+        else (current_work_management | default('') | string)
+      }}
+    work_management_rows:
+      - cmd_id: '9a'
+        name: 'Previous work management check'
+        cmd_name: 'Previous work management check'
+        cmd: 'Previous work management check'
+        host: "{{ fap.host_ip | default(inventory_hostname) }}"
+        host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+        hostname: "{{ inventory_hostname }}"
+        ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+        system: "{{ system | default('linux') }}"
+        report_type: "{{ report_type | default('periodic_server_check') }}"
+        file_path: "{{ file_path | default('') }}"
+        data_key: "{{ data_key | default('server') }}"
+        output: "{{ previous_work_management_text | trim }}"
+        result: "{{ previous_work_management_text | trim }}"
+        message: ""
+        failure_reason: ""
+        is_success: 1
+        is_pass: 1
+        check_result: "PASS"
+        status: "SUCCESS"
+      - cmd_id: '9b'
+        name: 'Current work management check'
+        cmd_name: 'Current work management check'
+        cmd: 'Current work management check'
+        host: "{{ fap.host_ip | default(inventory_hostname) }}"
+        host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+        hostname: "{{ inventory_hostname }}"
+        ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+        system: "{{ system | default('linux') }}"
+        report_type: "{{ report_type | default('periodic_server_check') }}"
+        file_path: "{{ file_path | default('') }}"
+        data_key: "{{ data_key | default('server') }}"
+        output: "{{ current_work_management_text | trim }}"
+        result: "{{ current_work_management_text | trim }}"
+        message: ""
+        failure_reason: ""
+        is_success: 1
+        is_pass: 1
+        check_result: "PASS"
+        status: "SUCCESS"
+
+- name: Append DR mock training source row
+  set_fact:
+    merged: "{{ merged + [dr_mock_training_row] }}"
+  vars:
+    dr_mock_training_source_path: "/fap/ansible/projects/[서버]_FAP_정기점검/templates/dr_mock_training_check_2026.xlsx"
+    dr_mock_training_row:
+      cmd_id: '10'
+      name: 'DR mock training detail check'
+      cmd_name: 'DR mock training detail check'
+      cmd: 'DR mock training detail check'
+      host: "{{ fap.host_ip | default(inventory_hostname) }}"
+      host_name: "{{ fap.host_ip | default(inventory_hostname) }}"
+      hostname: "{{ inventory_hostname }}"
+      ip: "{{ fap.host_ip | default(inventory_hostname) }}"
+      system: "{{ system | default('linux') }}"
+      report_type: "{{ report_type | default('periodic_server_check') }}"
+      file_path: "{{ file_path | default('') }}"
+      data_key: "{{ data_key | default('server') }}"
+      output: "{{ dr_mock_training_source_path }}"
+      result: "{{ dr_mock_training_source_path }}"
+      message: "Section 10 source workbook path"
+      failure_reason: ""
+      is_success: 1
+      is_pass: 1
+      check_result: "PASS"
+      status: "SUCCESS"
+
+- name: Print merged row count
+  debug:
+    msg: "merged rows prepared: {{ merged | length }}"
+
+- name: Save report data
+  become: false
+  delegate_to: localhost
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: /usr/bin/python3.12
+  fap.common.save_data:
+    content:
+      data_list: "{{ merged }}"
+    protocol: http
+    hostname: "{{ inventory_hostname }}"
+    data_type: "{{ data_type }}"
+    data_key: "{{ data_key }}"
+    template_id: "{{ fap.template_id | default(omit) }}"
+    job_id: "{{ fap.job_id | default(omit) }}"
+  register: db_save
+  when:
+    - merged is defined
+    - (merged | length) > 0

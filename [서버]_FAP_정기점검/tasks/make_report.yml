@@ -1,3 +1,97 @@
 ---
-- name: make_report
-  hosts: all
+- name: Prepare server report filename
+  set_fact:
+    server_report_filename: "{{ lookup('pipe', 'TZ=Asia/Seoul date +%Y년_%m월_정기점검.xlsx') }}"
+  run_once: true
+
+- name: Prepare server report paths
+  set_fact:
+    server_report_dir: "{{ file_path }}"
+    server_report_json_path: "/tmp/server_report_{{ fap.job_id | default('manual') }}.json"
+    server_report_output_path: "{{ file_path }}/{{ server_report_filename }}"
+  run_once: true
+
+- name: Build server report input data
+  set_fact:
+    report_input_data:
+      report_date: '{{ lookup("pipe", "TZ=Asia/Seoul date +%Y년\ %m월\ %d일") | trim }}'
+      first_ip: "{{ first_ip | default('') }}"
+      second_ip: "{{ second_ip | default('') }}"
+      first_name: "{{ first_name | default('') }}"
+      second_name: "{{ second_name | default('') }}"
+      special_note: "{{ special_note | default('') }}"
+      os_version: "{{ os_version.stdout | default('', true) | trim }}"
+      postgres_version: "{{ postgres_version.stdout | default('', true) | trim }}"
+      fap_version: "{{ fap_version.stdout | default('', true) | trim }}"
+      redis_version: "{{ redis_version.stdout | default('', true) | trim }}"
+      docker_version: "{{ docker_version.stdout | default('', true) | trim }}"
+      tomcat_version: "{{ tomcat_version.stdout | default('', true) | trim }}"
+      ansible_core_version: "{{ ansible_core_version.stdout | default('', true) | trim }}"
+      cpu_output: "{{ cpu_usage.stdout | default('', true) | trim }}"
+      disk_output: "{{ disk_result.stdout_lines | default([], true) | to_json }}"
+      memory_output: "{{ mem_result.stdout | default('', true) | trim }}"
+      os_patch_day: "{{ os_patch_day | default('', true) }}"
+      os_vulnerability: "{{ os_vulnerability | default('', true) }}"
+      os_note: "{{ os_note | default('', true) }}"
+      db_patch_day: "{{ db_patch_day | default('', true) }}"
+      db_vulnerability: "{{ db_vulnerability | default('', true) }}"
+      db_note: "{{ db_note | default('', true) }}"
+      fap_patch_day: "{{ fap_patch_day | default('', true) }}"
+      fap_vulnerability: "{{ fap_vulnerability | default('', true) }}"
+      fap_note: "{{ fap_note | default('', true) }}"
+      process_output: "{{ process_result.stdout | default('', true) | trim }}"
+      host_count: "{{ web_ui_result.stdout | default('', true) | trim }}"
+      user_count: "{{ user_count_result.stdout | default('', true) | trim }}"
+      schedule_count: "{{ schedule_count_result.stdout | default('', true) | trim }}"
+      notification_count: "{{ notification_count_result.stdout | default('', true) | trim }}"
+      user_account_status: "{{ user_account_status_result.stdout | default('', true) }}"
+      previous_template_count: "{{ previous_template_count_result.stdout | default('0', true) | trim }}"
+      current_template_count: "{{ current_template_count_result.stdout | default('0', true) | trim }}"
+      web_access_ip: "{{ web_access_ip_result.stdout | default('', true) }}"
+      previous_dr_mock_count: "0"
+      dr_mock_count: "{{ dr_mock_count | default('0', true) | string | trim }}"
+      previous_dr_cutover_count: "0"
+      dr_cutover_count: "{{ dr_cutover_count | default('0', true) | string | trim }}"
+      previous_dr_manual_ip_count: "0"
+      dr_manual_ip_count: "{{ dr_manual_ip_count | default('0', true) | string | trim }}"
+      current_work_management: "{{ current_work_management | default([], true) | to_json }}"
+      next_work_management: "{{ next_work_management | default([], true) | to_json }}"
+      dr_mock_source_path: "/fap/ansible/projects/[서버]_FAP_정기점검/templates/dr_mock_training_check_2026.xlsx"
+  run_once: true
+
+- name: Ensure server report output directory exists
+  file:
+    path: "{{ server_report_dir }}"
+    state: directory
+    mode: '0775'
+  run_once: true
+  delegate_to: localhost
+  become: false
+
+- name: Write server report input json
+  copy:
+    dest: "{{ server_report_json_path }}"
+    mode: '0644'
+    content: "{{ report_input_data | to_nice_json }}"
+  run_once: true
+  delegate_to: localhost
+  become: false
+
+- name: Generate server report workbook
+  command:
+    argv:
+      - /usr/bin/python3.12
+      - "{{ playbook_dir }}/../scripts/generate_server_report.py"
+      - "{{ playbook_dir }}/../templates/server_report_form.xlsx"
+      - "{{ server_report_json_path }}"
+      - "{{ server_report_output_path }}"
+  register: server_report_generation
+  run_once: true
+  delegate_to: localhost
+  become: false
+
+- name: Print generated server report path
+  debug:
+    var: server_report_generation.stdout
+  run_once: true
+  delegate_to: localhost
