@@ -19,27 +19,37 @@
     previous_template_count_file: "/fap/ansible/projects/[서버]_FAP_정기점검/roles/previous_template_count.txt"
     current_template_count_file: "/fap/ansible/projects/[서버]_FAP_정기점검/roles/current_template_count.txt"
 
+
 - name: 전월 수량 파일이 없으면 0으로 생성
   raw: "if [ ! -f {{ previous_template_count_file }} ]; then printf '0' > {{ previous_template_count_file }}; fi"
   ignore_errors: false
 
+
 - name: 이전 당월 수량을 전월 수량 파일로 복사
   raw: "if [ -f {{ current_template_count_file }} ]; then cp {{ current_template_count_file }} {{ previous_template_count_file }}; fi"
   ignore_errors: false
+
+
 
 - name: 전월 수량 읽기
   raw: "cat {{ previous_template_count_file }}"
   register: previous_template_count_result
   ignore_errors: false
 
+
+
 - name: 현재 활성 작업 템플릿 수량 조회
   raw: "printf \"select count(*) from template_info where is_enable = 1 and is_deleted = 0;\" | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
   register: current_template_count_result
   ignore_errors: false
 
+
+
 - name: 당월 수량 저장
   raw: "printf \"%s\" \"{{ current_template_count_result.stdout | trim }}\" > {{ current_template_count_file }}"
   ignore_errors: false
+
+
 
 - name: 작업 템플릿 수량 비교 결과 출력
   debug:
@@ -48,3 +58,5 @@
 
       전월 수량: {{ previous_template_count_result.stdout | trim }}
       당월 수량: {{ current_template_count_result.stdout | trim }}
+
+

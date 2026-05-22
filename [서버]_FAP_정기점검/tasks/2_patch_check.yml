@@ -1,0 +1,29 @@
+---
+- name: 2. 패치 관리 항목 점검
+  set_fact:
+    os_patch_day: "{{ os_patch_day_test }}"
+    os_vulnerability: "{{ os_vulnerability_test }}"
+    os_note: "{{ os_note_test }}"
+
+    db_patch_day: "{{ db_patch_day_test }}"
+    db_vulnerability: "{{ db_vulnerability_test }}"
+    db_note: "{{ db_note_test }}"
+
+    fap_patch_day: "{{ fap_patch_day_test }}"
+    fap_vulnerability: "{{ fap_vulnerability_test }}"
+    fap_note: "{{ fap_note_test }}"
+
+  register: patch_day_vulnerability
+  ignore_errors: false
+
+# - name: 2.패치 관리 항목 점검 결과 출력
+#   debug:
+#     msg: |
+#       "OS 패치 예정일 : {{ os_patch_day_test }}"
+#       "OS 취약점 내역 : {{ os_vulnerability_test }}"
+
+#       "DB" 패치 예정일 : {{ db_patch_day_test }}"
+#       "DB 취약점 내역 : {{ db_vulnerability_test }}"
+
+#       "FAP 패치 예정일 : {{ fap_patch_day_test }}"
+#       "FAP 취약점 내역 : {{ fap_vulnerability_test }}"

@@ -11,16 +11,16 @@
     - { cmd_id: '1b', cmd_name: 'Disk usage check', result_var: 'disk_result' }
     - { cmd_id: '1c', cmd_name: 'Memory usage check', result_var: 'mem_result' }
     - { cmd_id: '3', cmd_name: 'Process status check', result_var: 'process_result' }
-    - { cmd_id: '4a', cmd_name: 'Web UI host count check', result_var: 'web_ui_result' }
-    - { cmd_id: '4b', cmd_name: 'User menu count check', result_var: 'user_count_result' }
-    - { cmd_id: '4c', cmd_name: 'Schedule menu count check', result_var: 'schedule_count_result' }
-    - { cmd_id: '4d', cmd_name: 'Notification menu count check', result_var: 'notification_count_result' }
-    - { cmd_id: '4e', cmd_name: 'Template menu count check', result_var: 'template_count_result' }
-    - { cmd_id: '4f', cmd_name: 'SFTP file menu check', result_var: 'sftp_file_result' }
-    - { cmd_id: '5', cmd_name: 'User account status check', result_var: 'user_account_status_result' }
-    - { cmd_id: '6a', cmd_name: 'Previous template count check', result_var: 'previous_template_count_result' }
-    - { cmd_id: '6b', cmd_name: 'Current template count check', result_var: 'current_template_count_result' }
-    - { cmd_id: '7', cmd_name: 'Web access IP check', result_var: 'web_access_ip_result' }
+    - { cmd_id: '4a', cmd_name: 'Web UI host count check', result_var: 'web_ui_result', first_ip_only: true }
+    - { cmd_id: '4b', cmd_name: 'User menu count check', result_var: 'user_count_result', first_ip_only: true }
+    - { cmd_id: '4c', cmd_name: 'Schedule menu count check', result_var: 'schedule_count_result', first_ip_only: true }
+    - { cmd_id: '4d', cmd_name: 'Notification menu count check', result_var: 'notification_count_result', first_ip_only: true }
+    - { cmd_id: '4e', cmd_name: 'Template menu count check', result_var: 'template_count_result', first_ip_only: true }
+    - { cmd_id: '4f', cmd_name: 'SFTP file menu check', result_var: 'sftp_file_result', first_ip_only: true }
+    - { cmd_id: '5', cmd_name: 'User account status check', result_var: 'user_account_status_result', first_ip_only: true }
+    - { cmd_id: '6a', cmd_name: 'Previous template count check', result_var: 'previous_template_count_result', first_ip_only: true }
+    - { cmd_id: '6b', cmd_name: 'Current template count check', result_var: 'current_template_count_result', first_ip_only: true }
+    - { cmd_id: '7', cmd_name: 'Web access IP check', result_var: 'web_access_ip_result', first_ip_only: true }
   vars:
     result_ref: "{{ vars[item.result_var] | default({}) }}"
     stdout_lines_clean: "{{ result_ref.stdout_lines | default([], true) | reject('equalto', '') | list }}"
@@ -62,6 +62,11 @@
       is_pass: "{{ pass_value | int }}"
       check_result: "{{ 'PASS' if (pass_value | int) == 1 else 'FAIL' }}"
       status: "{{ 'SUCCESS' if (success_value | int) == 1 else 'FAILED' }}"
+  when: >-
+    {{
+      (not (item.first_ip_only | default(false) | bool))
+      or ((fap.host_ip | default(inventory_hostname) | string) == (first_ip | string))
+    }}
 
 - name: Append patch management rows
   set_fact:
@@ -194,6 +199,7 @@
         is_pass: 1
         check_result: "PASS"
         status: "SUCCESS"
+  when: (fap.host_ip | default(inventory_hostname) | string) == (first_ip | string)
 
 - name: Append work management rows
   set_fact:
@@ -201,15 +207,15 @@
   vars:
     previous_work_management_text: >-
       {{
-        (previous_work_management | default([], true) | join('\n'))
-        if (previous_work_management | default([], true)) is sequence and (previous_work_management | default([], true)) is not string
-        else (previous_work_management | default('') | string)
-      }}
-    current_work_management_text: >-
-      {{
         (current_work_management | default([], true) | join('\n'))
         if (current_work_management | default([], true)) is sequence and (current_work_management | default([], true)) is not string
         else (current_work_management | default('') | string)
+      }}
+    current_work_management_text: >-
+      {{
+        (next_work_management_report | default([], true) | join('\n'))
+        if (next_work_management_report | default([], true)) is sequence and (next_work_management_report | default([], true)) is not string
+        else (next_work_management_report | default('') | string)
       }}
     work_management_rows:
       - cmd_id: '9a'
@@ -279,6 +285,7 @@
       is_pass: 1
       check_result: "PASS"
       status: "SUCCESS"
+  when: (fap.host_ip | default(inventory_hostname) | string) == (first_ip | string)
 
 - name: Print merged row count
   debug:
@@ -303,3 +310,4 @@
   when:
     - merged is defined
     - (merged | length) > 0
+

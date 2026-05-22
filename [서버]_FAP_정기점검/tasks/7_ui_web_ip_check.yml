@@ -38,6 +38,8 @@
   register: web_access_ip_result
   ignore_errors: false
 
+
+
 - name: 7. 웹 접속 IP 점검 결과 출력
   debug:
     msg: |
@@ -46,3 +48,5 @@
       {% for line in web_access_ip_result.stdout_lines %}
       {{ line }}
       {% endfor %}
+
+

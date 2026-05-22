@@ -1,0 +1,15 @@
+---
+- name: 3. 자동화 서버 관련 프로세스 가동 점검
+  raw: |
+    printf "%-20s %-30s\n" "NAME" "STATUS"
+
+    docker ps -a --format '{% raw %}{{.Names}}|{{.Status}}{% endraw %}' | while IFS='|' read -r name status
+    do
+      printf "%-20s %-30s\n" "$name" "$status"
+    done
+  register: process_result
+  ignore_errors: false
+  
+- name: 프로세스 가동 점검
+  debug:
+    var: process_result

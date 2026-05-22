@@ -1,4 +1,4 @@
----
+﻿---
 - name: Prepare server report filename
   set_fact:
     server_report_filename: "{{ lookup('pipe', 'TZ=Asia/Seoul date +%Y년_%m월_정기점검.xlsx') }}"
@@ -11,25 +11,69 @@
     server_report_output_path: "{{ file_path }}/{{ server_report_filename }}"
   run_once: true
 
+- name: Initialize server report host list
+  set_fact:
+    server_report_hosts: []
+  run_once: true
+
+- name: Build server report host list from actual play hosts
+  set_fact:
+    server_report_hosts: "{{ server_report_hosts + [server_report_host_item] }}"
+  loop: "{{ ansible_play_hosts }}"
+  vars:
+    host_data: "{{ hostvars[item] }}"
+    host_fap: "{{ hostvars[item].fap | default({}) }}"
+    host_ip_value: "{{ host_fap.host_ip | default(item) }}"
+    server_report_host_item:
+      inventory_hostname: "{{ item }}"
+      ip: "{{ host_ip_value }}"
+      os_version: "{{ host_data.os_version.stdout | default('', true) | trim }}"
+      postgres_version: "{{ host_data.postgres_version.stdout | default('', true) | trim }}"
+      fap_version: "{{ host_data.fap_version.stdout | default('', true) | trim }}"
+      redis_version: "{{ host_data.redis_version.stdout | default('', true) | trim }}"
+      docker_version: "{{ host_data.docker_version.stdout | default('', true) | trim }}"
+      tomcat_version: "{{ host_data.tomcat_version.stdout | default('', true) | trim }}"
+      ansible_core_version: "{{ host_data.ansible_core_version.stdout | default('', true) | trim }}"
+      cpu_output: "{{ host_data.cpu_usage.stdout | default('', true) | trim }}"
+      disk_output: "{{ host_data.disk_result.stdout_lines | default([], true) }}"
+      memory_output: "{{ host_data.mem_result.stdout | default('', true) | trim }}"
+      process_output: "{{ host_data.process_result.stdout | default('', true) | trim }}"
+  run_once: true
+
 - name: Build server report input data
   set_fact:
     report_input_data:
       report_date: '{{ lookup("pipe", "TZ=Asia/Seoul date +%Y년\ %m월\ %d일") | trim }}'
-      first_ip: "{{ first_ip | default('') }}"
-      second_ip: "{{ second_ip | default('') }}"
+      servers: "{{ server_report_hosts }}"
+      first_ip: "{{ server_report_hosts[0].ip | default(first_ip | default('')) }}"
+      second_ip: "{{ server_report_hosts[1].ip | default('') }}"
       first_name: "{{ first_name | default('') }}"
       second_name: "{{ second_name | default('') }}"
       special_note: "{{ special_note | default('') }}"
-      os_version: "{{ os_version.stdout | default('', true) | trim }}"
-      postgres_version: "{{ postgres_version.stdout | default('', true) | trim }}"
-      fap_version: "{{ fap_version.stdout | default('', true) | trim }}"
-      redis_version: "{{ redis_version.stdout | default('', true) | trim }}"
-      docker_version: "{{ docker_version.stdout | default('', true) | trim }}"
-      tomcat_version: "{{ tomcat_version.stdout | default('', true) | trim }}"
-      ansible_core_version: "{{ ansible_core_version.stdout | default('', true) | trim }}"
-      cpu_output: "{{ cpu_usage.stdout | default('', true) | trim }}"
-      disk_output: "{{ disk_result.stdout_lines | default([], true) | to_json }}"
-      memory_output: "{{ mem_result.stdout | default('', true) | trim }}"
+      os_version: "{{ server_report_hosts[0].os_version | default('', true) }}"
+      os_version_eos: "{{ os_version_eos | default('', true) }}"
+      os_version_note: "{{ os_version_note | default('', true) }}"
+      postgres_version: "{{ server_report_hosts[0].postgres_version | default('', true) }}"
+      db_version_eos: "{{ db_version_eos | default('', true) }}"
+      db_version_note: "{{ db_version_note | default('', true) }}"
+      fap_version: "{{ server_report_hosts[0].fap_version | default('', true) }}"
+      fap_version_eos: "{{ fap_version_eos | default('', true) }}"
+      fap_version_note: "{{ fap_version_note | default('', true) }}"
+      redis_version: "{{ server_report_hosts[0].redis_version | default('', true) }}"
+      redis_version_eos: "{{ redis_version_eos | default('', true) }}"
+      redis_version_note: "{{ redis_version_note | default('', true) }}"
+      docker_version: "{{ server_report_hosts[0].docker_version | default('', true) }}"
+      docker_version_eos: "{{ docker_version_eos | default('', true) }}"
+      docker_version_note: "{{ docker_version_note | default('', true) }}"
+      tomcat_version: "{{ server_report_hosts[0].tomcat_version | default('', true) }}"
+      tomcat_version_eos: "{{ tomcat_version_eos | default('', true) }}"
+      tomcat_version_note: "{{ tomcat_version_note | default('', true) }}"
+      ansible_core_version: "{{ server_report_hosts[0].ansible_core_version | default('', true) }}"
+      ansible_core_version_eos: "{{ ansible_core_version_eos | default('', true) }}"
+      ansible_core_version_note: "{{ ansible_core_version_note | default('', true) }}"
+      cpu_output: "{{ server_report_hosts[0].cpu_output | default('', true) }}"
+      disk_output: "{{ server_report_hosts[0].disk_output | default([], true) }}"
+      memory_output: "{{ server_report_hosts[0].memory_output | default('', true) }}"
       os_patch_day: "{{ os_patch_day | default('', true) }}"
       os_vulnerability: "{{ os_vulnerability | default('', true) }}"
       os_note: "{{ os_note | default('', true) }}"
@@ -39,7 +83,7 @@
       fap_patch_day: "{{ fap_patch_day | default('', true) }}"
       fap_vulnerability: "{{ fap_vulnerability | default('', true) }}"
       fap_note: "{{ fap_note | default('', true) }}"
-      process_output: "{{ process_result.stdout | default('', true) | trim }}"
+      process_output: "{{ server_report_hosts[0].process_output | default('', true) }}"
       host_count: "{{ web_ui_result.stdout | default('', true) | trim }}"
       user_count: "{{ user_count_result.stdout | default('', true) | trim }}"
       schedule_count: "{{ schedule_count_result.stdout | default('', true) | trim }}"
@@ -54,8 +98,8 @@
       dr_cutover_count: "{{ dr_cutover_count | default('0', true) | string | trim }}"
       previous_dr_manual_ip_count: "0"
       dr_manual_ip_count: "{{ dr_manual_ip_count | default('0', true) | string | trim }}"
-      current_work_management: "{{ current_work_management | default([], true) | to_json }}"
-      next_work_management: "{{ next_work_management | default([], true) | to_json }}"
+      current_work_management: "{{ current_work_management | default([], true) }}"
+      next_work_management: "{{ next_work_management_report | default([], true) }}"
       dr_mock_source_path: "/fap/ansible/projects/[서버]_FAP_정기점검/templates/dr_mock_training_check_2026.xlsx"
   run_once: true
 

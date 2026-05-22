@@ -17,34 +17,61 @@ special_note: "{{ SPECIAL_NOTE | default('') }}"
 job_info:
   file_path: "{{ file_path }}"
 
+### 서버 현황 버전 표 직접 입력 항목
+os_version_eos: "2031.5.31"
+os_version_note: "업데이트가 필요하다면 문의"
+
+db_version_eos: "2026.11.11"
+db_version_note: "업데이트가 필요하다면 문의"
+
+fap_version_eos: "예정 없음"
+fap_version_note: "업데이트가 필요하다면 문의"
+
+redis_version_eos: "예정 없음"
+redis_version_note: ""
+
+docker_version_eos: "예정 없음"
+docker_version_note: ""
+
+tomcat_version_eos: "예정 없음"
+tomcat_version_note: "업데이트가 필요하다면 문의"
+
+ansible_core_version_eos: "예정 없음"
+ansible_core_version_note: "업데이트가 필요하다면 문의"
+
 ### 변동 사항이 있을경우 입력이 필요합니다.
 # 2. 패치 관리 항목 점검 내용
 
-# 입력 순서 참고
-
+### 입력 순서 참고
 # 패치 예정 : 
 # 취약점 : 
 # 비고 :
 
 os_patch_day_test: 미정
-os_vulnerability_test: 없습니다.
-os_note_test: 없습니다.
+os_vulnerability_test: 없습니다
+os_note_test: 없습니다
 
 db_patch_day_test: 미정
 db_vulnerability_test: 없습니다
-db_note_test: 없습니다.
+db_note_test: 없습니다
 
 fap_patch_day_test: 미정
 fap_vulnerability_test: 없습니다
-fap_note_test: 없습니다.
+fap_note_test: 없습니다
 
-
-
-# 9. 작업 관리 (맨먼스 산정)
+### 9. 작업 관리 (맨먼스 산정)
 # 당월 진행 내역
+# 작성 예시
+# current_month_work_management:
+#   - "Ansible 플레이북 수정"
+#   - "Alteon 점검 자동화 테스트"
+
 current_month_work_management:
-  - "Ansible 플레이북 수정"
-  - "Alteon 점검 자동화 테스트"
+  - 26.04.20 정기점검 (0)
+  - 26.04.23 DR 모의훈련 (0.05)
+  - 26.05.07 BLOSSOM 결재 연동 오류 해결 (0)
+  - 26.05.12 구성점검 템플릿 수행 지원 건 (0.05)
+  - 잔여 지원 공수 : 1.65 / 2.6
 
 # 이후 진행 예정
 next_work_management:

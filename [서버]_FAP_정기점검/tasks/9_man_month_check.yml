@@ -1,0 +1,7 @@
+---
+- name: 9_man_month_check
+  set_fact:
+    current_work_management: "{{ current_month_work_management }}"
+    next_work_management_report: "{{ next_work_management }}"
+  register: work_management_result
+  ignore_errors: false

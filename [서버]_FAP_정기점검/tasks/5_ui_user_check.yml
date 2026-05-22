@@ -3,7 +3,7 @@
   raw: "printf \"select coalesce(oi.organization_name, '') || ',' || coalesce(ti.team_name, '') || ',' || coalesce(ui.user_id, '') || ',' || coalesce(ui.user_name, '') || ',' || coalesce(ui.user_type, '') || ',' || case when ui.is_deleted = 1 then '삭제됨' when ui.is_enable = 0 then '비활성화' when ui.must_change_pw = 1 then '비밀번호 변경 필요' else '정상' end from user_info ui left join team_info ti on ui.team_id = ti.team_id left join organization_info oi on ti.organization_id = oi.organization_id where ui.is_deleted = 0 and ui.is_enable = 1 order by oi.organization_id, ti.team_id, ui.user_id;\" | docker exec -i -e PGPASSWORD='rt12345%' pg-0 psql -U nds -d fap -At"
   register: user_account_status_result
   ignore_errors: false
-
+  
 - name: 5. 사용자 계정 현황 점검 결과 출력
   debug:
     msg: |
