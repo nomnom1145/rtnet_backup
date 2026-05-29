@@ -76,6 +76,19 @@ def copy_row_style(ws, src_row, dst_row, max_col=7):
     ws.row_dimensions[dst_row].height = ws.row_dimensions[src_row].height
 
 
+def clone_row_format(ws, src_row, dst_row, max_col=7, merge_ranges=None):
+    """
+    Copy the full visual layout from one row to another.
+
+    The row has to be normalized before and after merging so that styles
+    survive insertions into ranges that later become merged cells.
+    """
+    normalize_row_merges(ws, dst_row, merge_ranges=None)
+    copy_row_style(ws, src_row, dst_row, max_col=max_col)
+    normalize_row_merges(ws, dst_row, merge_ranges=merge_ranges)
+    copy_row_style(ws, src_row, dst_row, max_col=max_col)
+
+
 def ensure_merge(ws, start_row, start_col, end_row, end_col):
     target = f"{ws.cell(start_row, start_col).coordinate}:{ws.cell(end_row, end_col).coordinate}"
     for merged in list(ws.merged_cells.ranges):
@@ -91,6 +104,23 @@ def unmerge_row_single_line_ranges(ws, row):
                 ws.unmerge_cells(str(merged))
             except (KeyError, ValueError):
                 pass
+
+
+def unmerge_overlapping_ranges(ws, start_row, end_row):
+    """
+    Remove pre-existing merged blocks that overlap a dynamic table region.
+
+    Some template areas reserve space as one large merged block. If we later
+    reuse that band as row-by-row table data, those merges must be cleared
+    first or borders/alignment appear to collapse into a single cell block.
+    """
+    for merged in list(ws.merged_cells.ranges):
+        if merged.max_row < start_row or merged.min_row >= end_row:
+            continue
+        try:
+            ws.unmerge_cells(str(merged))
+        except (KeyError, ValueError):
+            pass
 
 
 def normalize_row_merges(ws, row, merge_ranges=None):
@@ -118,26 +148,20 @@ def rebuild_dynamic_rows(ws, start_row, next_section_row, row_count, template_ro
     available_rows = max(next_section_row - start_row, 1)
     extra_rows = max(row_count - available_rows, 0)
 
+    unmerge_overlapping_ranges(ws, start_row, next_section_row)
+
     if extra_rows > 0:
         insert_at = start_row + available_rows
         ws.insert_rows(insert_at, extra_rows)
         for offset in range(extra_rows):
             row = insert_at + offset
-            normalize_row_merges(ws, row, merge_ranges=None)
-            for col in range(1, max_col + 1):
-                copy_cell_style(ws, template_row, row, col)
-            ws.row_dimensions[row].height = ws.row_dimensions[template_row].height
-            normalize_row_merges(ws, row, merge_ranges=merge_ranges)
+            clone_row_format(ws, template_row, row, max_col=max_col, merge_ranges=merge_ranges)
 
     total_rows = max(available_rows, row_count)
     for offset in range(total_rows):
         row = start_row + offset
-        normalize_row_merges(ws, row, merge_ranges=None)
         if offset < row_count:
-            for col in range(1, max_col + 1):
-                copy_cell_style(ws, template_row, row, col)
-            ws.row_dimensions[row].height = ws.row_dimensions[template_row].height
-            normalize_row_merges(ws, row, merge_ranges=merge_ranges)
+            clone_row_format(ws, template_row, row, max_col=max_col, merge_ranges=merge_ranges)
         clear_row_values(ws, row, max_col=max_col)
 
     return start_row + total_rows

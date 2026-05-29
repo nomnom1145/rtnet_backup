@@ -1,8 +1,15 @@
 ---
+# 공통 변수
+FIRST_IP: "172.20.1.173" # 작업 결과 윗줄에 들어갈 대상 IP
+SECOND_IP: "192.168.1.202" # 작업 결과 아랫줄에 들어갈 대상 IP
+FIRST_NAME: "장상기" # 알티넷 담당자명
+SECOND_NAME: "박소은" # 신세계 아이앤씨 담당자명
+SPECIAL_NOTE: "특이사항 없음" # 특이사항 입력 부분 작성 내용
+
 data_type: report
 data_key: server
 system: linux
-report_type: periodic_server_check
+report_type: periodic_server_check # 리포트 타입
 today: "{{ lookup('pipe', 'python3 -c \"from datetime import datetime, timezone, timedelta; print(datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9))).strftime(\\\"%Y%m%d\\\"))\"') }}"
 report_job_id: "{{ fap.job_id | default(fap_job_id | default('manual')) }}"
 file_path: "/fap/report/{{ report_type }}/{{ today }}/{{ report_job_id }}"
