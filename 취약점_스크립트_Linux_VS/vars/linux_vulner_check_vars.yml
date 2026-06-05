@@ -1,0 +1,53 @@
+---
+# save_to_db vars
+today: "{{ lookup('ansible.builtin.pipe', 'date +%Y-%m-%d')}}"
+data_key: linux_vulnercheck_total
+local_dir_path: "/fap/report/{{ data_key }}/{{ today }}/{{ fap.job_id }}/{{ fap.host_name }}_{{ inventory_hostname }}"
+
+# job vars
+file:
+  path: "/tmp/cmtinfo_{{ today }}"
+copy:
+  # src: "../vars/VS_Unix_Server_240829_140259.sh"
+  # src: "/fap/ansible/projects/취약점_스크립트_변수/vars/han_linux.sh"
+  src: "/fap/ansible/projects/취약점_스크립트_Linux_VS/vars/han_linux.sh"
+# src: "/app/fap/upload/sync_files/{{ fap.host_vars.FILE }}"
+  dest: "{{ file.path }}"
+  mode: "777"
+script: "{{ copy.dest }}/*.sh"  # 스크립트 실행 변수
+download_file: "result_{{ fap.host_name }}.tar.gz"
+vulner_running_shell: |
+  cd {{ copy.dest }}
+  script_name=$(ls | grep '\.sh$')
+  if [ -z "$script_name" ]; then
+      rm -rf {{ copy.dest }}
+      exit 1
+  fi
+
+### 결과 파일 압축 
+# vulner_tar_gz: |
+#   cd {{ copy.dest }}
+#   ls -alht
+#   check_count=$(ls | wc -l)
+#   if [[ $check_count -ge 1 ]]; then
+#       ls -alht
+#       tar -zcf {{ download_file }} *
+#       chmod 0755 *
+#       ls | grep {{ download_file }}
+#       if [[ $? -eq 0 ]]; then
+#           exit 0
+#       else
+#           exit 1
+#       fi
+#   else
+#       exit 1
+#   fi
+
+vulner_tar_gz: >-
+  cd {{ copy.dest | quote }} && 
+  ls -alht && 
+  [ -n "$(find . -maxdepth 1 -type f)" ] && 
+  tar -zcf {{ download_file | quote }} * && 
+  chmod 0755 * && 
+  ls | grep -q {{ download_file | quote }} && 
+  exit 0 || exit 1
