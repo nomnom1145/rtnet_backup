@@ -40,5 +40,9 @@
           -o IdentitiesOnly=yes
           -o StrictHostKeyChecking=accept-new
 
+    - name: 스크립트 파일 실행 결과
+      debug:
+        var: sh_test
+
     - name: 작업 결과 메일 전송
       include_tasks: "../tasks/send_mail.yml"
